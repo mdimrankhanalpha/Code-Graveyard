@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Alpha Khan</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cinzel+Decorative:wght@700;900&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+<style>
+/* =========================================================
+   RESET
+========================================================= */
+*,*::before,*::after{ margin:0; padding:0; box-sizing:border-box; }
+
+:root{
+  /* ---- token system : "Khatam" emerald & gold ---- */
+  --void:        #02080a;
+  --abyss:       #030f11;
+  --panel-a:     rgba(6,24,25,.90);
+  --panel-b:     rgba(2,10,11,.95);
+
+  --emerald-deep:   #012a24;
+  --emerald-core:   #00c9a7;
+  --emerald-bright: #6dffe4;
+
+  --gold:        #c79a52;
+  --gold-bright: #f0d9a0;
+  --gold-soft:   rgba(199,154,82,.45);
+
+  --bone:        #f4ece6;
+  --ash:         rgba(244,236,230,.46);
+
+  --radius:22px;
+}
+
+html{ scroll-behavior:smooth; }
+
+body{
+  min-height:100vh;
+  font-family:'Cormorant Garamond', serif;
+  color:var(--bone);
+  background:
+    radial-gradient(circle at 50% -6%, rgba(0,201,167,.16), transparent 34%),
+    radial-gradient(circle at 90% 12%, rgba(199,154,82,.08), transparent 30%),
+    radial-gradient(circle at 6% 40%, rgba(0,201,167,.07), transparent 28%),
+    linear-gradient(180deg, var(--abyss) 0%, var(--void) 100%);
+  overflow-x:hidden;
+  position:relative;
+}
+
+/* =========================================================
+   ISLAMIC GEOMETRIC LATTICE BACKDROP
+========================================================= */
+.lattice{
+  position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.5;
+}
+.lattice canvas{ width:100%; height:100%; display:block; }
+
+/* floating embers layer */
+.embers{ position:fixed; inset:0; z-index:1; pointer-events:none; overflow:hidden; }
+.ember{
+  position:absolute; bottom:-6%; border-radius:50%;
+  background:radial-gradient(circle, var(--emerald-bright), transparent 70%);
+  filter:blur(.3px);
+  animation-name:emberRise;
+  animation-timing-function:linear;
+  animation-iteration-count:infinite;
+  opacity:0;
+}
+@keyframes emberRise{
+  0%{ transform:translateY(0) translateX(0); opacity:0; }
+  8%{ opacity:.85; }
+  92%{ opacity:.5; }
+  100%{ transform:translateY(-112vh) translateX(var(--drift,20px)); opacity:0; }
+}
+
+/* =========================================================
+   PAGE WRAP
+========================================================= */
+.page{
+  position:relative; z-index:2;
+  width:min(100%, 1180px);
+  margin:0 auto;
+  padding: clamp(34px,5vw,64px) clamp(14px,3vw,28px) 100px;
+}
+
+/* =========================================================
+   HERO + KHATAM SIGIL
+========================================================= */
+.hero{
+  width:100%; min-height:40vh;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; padding-top:30px; padding-bottom:26px; gap:22px;
+}
+
+.sigil{
+  width:clamp(120px,16vw,190px);
+  height:clamp(120px,16vw,190px);
+  perspective:1000px;
+  position:relative;
+}
+.sigil-stage{
+  width:100%; height:100%; position:relative;
+  transform-style:preserve-3d;
+  animation:sigilSpin 20s linear infinite;
+}
+@keyframes sigilSpin{ from{ transform:rotateY(0deg) rotateX(12deg);} to{ transform:rotateY(360deg) rotateX(12deg);} }
+
+.ring{ position:absolute; inset:0; border-radius:50%; transform-style:preserve-3d; }
+.ring-a{ border:1.5px solid rgba(199,154,82,.55); transform:rotateX(90deg); box-shadow:0 0 20px rgba(199,154,82,.22); }
+.ring-b{ border:1.5px solid rgba(0,201,167,.65); transform:rotateY(58deg); box-shadow:0 0 24px rgba(0,201,167,.3); }
+.ring-c{ border:1.5px solid rgba(109,255,228,.42); transform:rotateY(-58deg) rotateX(28deg); box-shadow:0 0 22px rgba(109,255,228,.22); }
+
+/* the 8-point star (khatam) at the core, built from two overlapping squares */
+.star8{
+  position:absolute; inset:0; margin:auto;
+  width:44%; height:44%;
+  transform:translateZ(26px);
+  animation:starTurn 12s linear infinite;
+}
+.star8 span{
+  position:absolute; inset:0;
+  background:linear-gradient(135deg, var(--gold-bright), var(--gold) 55%, #6b4c1c 100%);
+  box-shadow:0 0 22px rgba(199,154,82,.5), inset 0 0 10px rgba(0,0,0,.35);
+}
+.star8 span:first-child{ clip-path:polygon(50% 0%,63% 37%,100% 50%,63% 63%,50% 100%,37% 63%,0% 50%,37% 37%); }
+.star8 span:last-child{
+  transform:rotate(22.5deg);
+  background:linear-gradient(135deg, var(--emerald-bright), var(--emerald-core) 55%, var(--emerald-deep) 100%);
+  box-shadow:0 0 22px rgba(0,201,167,.5), inset 0 0 10px rgba(0,0,0,.35);
+  clip-path:polygon(50% 0%,63% 37%,100% 50%,63% 63%,50% 100%,37% 63%,0% 50%,37% 37%);
+}
+@keyframes starTurn{ 0%,100%{ filter:brightness(1) saturate(1);} 50%{ filter:brightness(1.35) saturate(1.15);} }
+
+.ornament,.divider{ width:min(100%,640px); display:flex; align-items:center; justify-content:center; gap:12px; }
+.line{ flex:1; height:1px; background:linear-gradient(90deg, transparent, rgba(0,201,167,.35), transparent); }
+.diamond{ width:8px; height:8px; transform:rotate(45deg); background:linear-gradient(135deg, var(--gold-bright), var(--gold)); box-shadow:0 0 12px rgba(199,154,82,.35); }
+
+.title-wrap{ width:100%; display:flex; justify-content:center; align-items:center; overflow:visible; padding-inline:10px; position:relative; }
+#title{
+  display:block; width:100%; max-width:100%; text-align:center; white-space:nowrap; line-height:.92;
+  font-family:'Cinzel Decorative', serif; font-weight:900;
+  font-size:clamp(2rem,7vw,5.6rem);
+  letter-spacing:clamp(.05em,.7vw,.18em);
+  position:relative;
+  background:linear-gradient(100deg, var(--gold) 0%, var(--gold-bright) 18%, var(--bone) 32%, var(--gold-bright) 46%, var(--gold) 64%, var(--emerald-bright) 82%, var(--gold) 100%);
+  background-size:280% 100%;
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  filter:drop-shadow(0 0 18px rgba(0,201,167,.18));
+  animation:titleShimmer 7s ease-in-out infinite;
+  transform-origin:center center;
+}
+@keyframes titleShimmer{
+  0%{ background-position:0% 50%; }
+  50%{ background-position:100% 50%; }
+  100%{ background-position:0% 50%; }
+}
+.subtitle{
+  font-family:'Cormorant Garamond', serif; font-style:italic; font-weight:600;
+  font-size:clamp(.85rem,1.6vw,1.15rem);
+  letter-spacing:.32em;
+  color:var(--emerald-bright);
+  text-transform:uppercase;
+  text-align:center;
+  opacity:.9;
+  text-shadow:0 0 14px rgba(0,201,167,.25);
+}
+
+/* =========================================================
+   SECTION LABEL
+========================================================= */
+.section-title{
+  margin:32px auto 16px; text-align:center;
+  font-family:'JetBrains Mono', monospace;
+  font-size:clamp(.62rem,1vw,.75rem);
+  letter-spacing:.5em;
+  color:var(--ash); text-transform:uppercase;
+}
+
+/* =========================================================
+   RELIC FRAME + REVEAL
+========================================================= */
+.relic-frame{ position:relative; }
+.relic-frame::before{
+  content:""; position:absolute; inset:12px; pointer-events:none; z-index:0;
+  background:
+    linear-gradient(rgba(199,154,82,.5),rgba(199,154,82,.5)) top left/16px 1px no-repeat,
+    linear-gradient(rgba(199,154,82,.5),rgba(199,154,82,.5)) top left/1px 16px no-repeat,
+    linear-gradient(rgba(0,201,167,.5),rgba(0,201,167,.5)) top right/16px 1px no-repeat,
+    linear-gradient(rgba(0,201,167,.5),rgba(0,201,167,.5)) top right/1px 16px no-repeat,
+    linear-gradient(rgba(0,201,167,.5),rgba(0,201,167,.5)) bottom left/16px 1px no-repeat,
+    linear-gradient(rgba(0,201,167,.5),rgba(0,201,167,.5)) bottom left/1px 16px no-repeat,
+    linear-gradient(rgba(199,154,82,.5),rgba(199,154,82,.5)) bottom right/16px 1px no-repeat,
+    linear-gradient(rgba(199,154,82,.5),rgba(199,154,82,.5)) bottom right/1px 16px no-repeat;
+}
+
+.reveal{ opacity:0; transform:translateY(26px); transition:opacity .7s ease, transform .7s ease; }
+.reveal.in{ opacity:1; transform:translateY(0); }
+
+/* =========================================================
+   CARD (panel)
+========================================================= */
+.card{
+  position:relative;
+  width:min(100%,1000px);
+  margin-inline:auto;
+  border-radius:var(--radius);
+  border:1px solid rgba(0,201,167,.16);
+  background:linear-gradient(180deg, var(--panel-a), var(--panel-b));
+  box-shadow:0 10px 44px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.02);
+  overflow:hidden;
+}
+.card-body{ position:relative; z-index:1; padding:clamp(20px,3vw,30px); }
+.card-label{
+  text-align:center; text-transform:uppercase; color:var(--ash);
+  font-family:'JetBrains Mono', monospace;
+  letter-spacing:.4em; font-size:clamp(.58rem,1vw,.68rem);
+  margin-bottom:20px;
+}
+
+/* =========================================================
+   RELIC CARD — with traveling gold/teal border trace on hover
+========================================================= */
+.relic-card{
+  position:relative;
+  display:flex;
+  text-decoration:none;
+  color:var(--bone);
+  border-radius:16px;
+  overflow:hidden;
+  transform-style:preserve-3d;
+  will-change:transform;
+  background:linear-gradient(160deg, rgba(9,26,27,.94), rgba(3,10,11,.96));
+  box-shadow:0 14px 32px rgba(0,0,0,.42);
+  transition:box-shadow .25s ease, transform .25s ease;
+}
+.relic-card::after{
+  content:""; position:absolute; inset:0; border-radius:inherit; padding:1px;
+  background:conic-gradient(from var(--ang,0deg), var(--gold) 0%, transparent 18%, transparent 82%, var(--emerald-core) 100%);
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor; mask-composite:exclude;
+  opacity:.55; pointer-events:none;
+  animation:borderTrace 5.5s linear infinite;
+}
+@keyframes borderTrace{ from{ --ang:0deg; } to{ --ang:360deg; } }
+.relic-card::before{
+  content:"";
+  position:absolute; inset:0;
+  background:radial-gradient(220px circle at var(--mx,50%) var(--my,50%), rgba(0,201,167,.16), transparent 60%);
+  opacity:0; transition:opacity .35s ease; pointer-events:none; z-index:1;
+}
+.relic-card:hover,
+.relic-card:focus-visible{
+  box-shadow:0 18px 46px rgba(0,201,167,.2), 0 0 0 1px rgba(199,154,82,.18);
+}
+.relic-card:hover::before,
+.relic-card:focus-visible::before{ opacity:1; }
+.relic-card:focus-visible{ outline:2px solid var(--gold-bright); outline-offset:3px; }
+.relic-card:active{ transform:scale(.98) !important; }
+
+.relic-icon{
+  flex-shrink:0;
+  display:grid; place-items:center;
+  border-radius:12px;
+  background:rgba(0,201,167,.08);
+  border:1px solid rgba(199,154,82,.22);
+  box-shadow:0 0 16px rgba(0,201,167,.12), inset 0 0 8px rgba(0,0,0,.4);
+  color:var(--gold-bright);
+  position:relative; z-index:2;
+}
+.relic-icon svg{ width:55%; height:55%; }
+
+.relic-label{
+  font-family:'Cinzel', serif; font-weight:600;
+  letter-spacing:.06em; line-height:1.3;
+  color:var(--bone);
+  position:relative; z-index:2;
+}
+.relic-sub{
+  font-family:'Cormorant Garamond', serif; font-style:italic; color:var(--ash);
+  font-size:.82rem; letter-spacing:.04em; margin-top:2px;
+  position:relative; z-index:2;
+}
+
+/* --- featured tiles (Open My Content): icon over label --- */
+.feature-row{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:14px;
+}
+.feature-row .relic-card{
+  flex-direction:column; align-items:center; justify-content:center;
+  gap:14px; text-align:center; padding:26px 16px;
+}
+.feature-row .relic-icon{ width:52px; height:52px; }
+.feature-row .relic-label{ font-size:clamp(.78rem,1.2vw,.95rem); }
+
+/* --- explore directory rows: icon beside label --- */
+.nav-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.nav-grid .relic-card{
+  align-items:center; gap:16px; padding:16px 18px; min-height:72px;
+}
+.nav-grid .relic-icon{ width:44px; height:44px; }
+.nav-grid .relic-label{ font-size:clamp(.74rem,1vw,.9rem); }
+.nav-grid .full{ grid-column:1/-1; }
+
+/* =========================================================
+   COMMUNICATE — primary gold CTA
+========================================================= */
+.cta{
+  position:relative;
+  display:flex; align-items:center; justify-content:center; gap:14px;
+  width:100%; min-height:66px;
+  border-radius:14px;
+  text-decoration:none;
+  font-family:'Cinzel', serif; font-weight:700;
+  letter-spacing:.08em;
+  font-size:clamp(.8rem,1.3vw,1rem);
+  color:#031311;
+  background:linear-gradient(135deg, #f3d394, var(--gold) 42%, var(--emerald-core) 130%);
+  box-shadow:0 14px 34px rgba(0,201,167,.2), inset 0 0 0 1px rgba(255,255,255,.28);
+  overflow:hidden;
+  transition:transform .2s ease, box-shadow .2s ease, filter .2s ease;
+}
+.cta::before{
+  content:""; position:absolute; top:0; left:-40%; width:35%; height:100%;
+  background:linear-gradient(115deg, transparent, rgba(255,255,255,.55), transparent);
+  transform:skewX(-18deg);
+  animation:ctaSheen 3.4s ease-in-out infinite;
+}
+@keyframes ctaSheen{ 0%{ left:-40%; } 55%,100%{ left:130%; } }
+.cta svg{ width:20px; height:20px; position:relative; z-index:1; }
+.cta span{ position:relative; z-index:1; }
+.cta:hover{ transform:translateY(-2px); filter:brightness(1.08); box-shadow:0 18px 42px rgba(0,201,167,.3); }
+.cta:active{ transform:translateY(0) scale(.98); }
+.cta:focus-visible{ outline:2px solid var(--emerald-bright); outline-offset:3px; }
+
+/* =========================================================
+   TIMER
+========================================================= */
+.timer-inner{ position:relative; display:flex; flex-direction:column; gap:20px; align-items:center; padding-top:6px; }
+.timer-digits{ width:100%; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; align-items:center; }
+.t-block{
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; min-width:0;
+  padding:14px 6px 12px; border-radius:14px;
+  background:radial-gradient(120% 120% at 50% 0%, rgba(0,201,167,.08), transparent 70%);
+  border:1px solid rgba(199,154,82,.18);
+}
+.t-num{
+  width:100%; text-align:center;
+  font-family:'JetBrains Mono', monospace; font-weight:700;
+  font-size:clamp(1.3rem,4.6vw,3.4rem); line-height:1; letter-spacing:.03em;
+  color:#f7f2ef; text-shadow:0 0 14px rgba(0,201,167,.28);
+}
+.t-lbl{ text-transform:uppercase; color:var(--ash); font-family:'JetBrains Mono',monospace; font-size:clamp(.42rem,.8vw,.6rem); letter-spacing:.32em; }
+.scan-bar{ width:100%; height:2px; border-radius:999px; overflow:hidden; background:rgba(0,201,167,.1); }
+.scan-fill{ width:32%; height:100%; background:linear-gradient(90deg, transparent, rgba(0,201,167,.9), transparent); box-shadow:0 0 14px rgba(0,201,167,.3); animation:scanMove 2.8s linear infinite; }
+@keyframes scanMove{ from{ transform:translateX(-130%);} to{ transform:translateX(330%);} }
+.timer-note{ text-align:center; color:rgba(109,255,228,.55); text-transform:uppercase; font-family:'JetBrains Mono',monospace; font-size:clamp(.4rem,.78vw,.58rem); letter-spacing:.22em; line-height:1.8; }
+
+/* =========================================================
+   FOOTER
+========================================================= */
+footer{
+  margin-top:70px; text-align:center; color:rgba(0,201,167,.35);
+  font-family:'JetBrains Mono', monospace;
+  text-transform:uppercase; letter-spacing:.32em;
+  font-size:clamp(.4rem,.78vw,.58rem); line-height:2;
+}
+
+/* =========================================================
+   REDUCED MOTION
+========================================================= */
+@media (prefers-reduced-motion: reduce){
+  .sigil-stage,.star8,#title,.ember,.scan-fill,.relic-card::after,.cta::before{ animation:none !important; }
+  .reveal{ opacity:1; transform:none; transition:none; }
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+@media (max-width:900px){
+  .feature-row{ grid-template-columns:1fr; }
+  .nav-grid{ grid-template-columns:1fr; }
+  .nav-grid .full{ grid-column:auto; }
+  .hero{ min-height:32vh; }
+}
+@media (max-width:560px){
+  .timer-digits{ gap:8px; }
+  .t-num{ font-size:clamp(1rem,8vw,1.7rem); }
+}
+</style>
+</head>
+<body>
+
+<div class="lattice"><canvas id="latticeCanvas"></canvas></div>
+<div class="embers" id="embers"></div>
+
+<div class="page">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="sigil">
+      <div class="sigil-stage">
+        <div class="ring ring-a"></div>
+        <div class="ring ring-b"></div>
+        <div class="ring ring-c"></div>
+        <div class="star8"><span></span><span></span></div>
+      </div>
+    </div>
+
+    <div class="ornament">
+      <div class="line"></div>
+      <div class="diamond"></div>
+      <div class="diamond"></div>
+      <div class="diamond"></div>
+      <div class="line"></div>
+    </div>
+
+    <div class="title-wrap"><h1 id="title">ALPHA KHAN</h1></div>
+    <p class="subtitle">Realm · Of · The · Alpha</p>
+  </section>
+
+  <div class="divider" style="margin-bottom:28px;">
+    <div class="line"></div><div class="diamond"></div><div class="diamond"></div><div class="diamond"></div><div class="line"></div>
+  </div>
+
+  <!-- OPEN MY CONTENT -->
+  <section class="card relic-frame reveal">
+    <div class="card-body">
+      <p class="card-label">Open My Content</p>
+      <div class="feature-row">
+
+        <a class="relic-card" href="https://sites.google.com/view/alphakhanpost/" target="_blank" rel="noopener">
+          <span class="relic-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 4h9a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H6"/>
+              <path d="M6 4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2"/>
+              <line x1="9" y1="9" x2="15" y2="9"/>
+              <line x1="9" y1="13" x2="15" y2="13"/>
+            </svg>
+          </span>
+          <span class="relic-label">My Post</span>
+        </a>
+
+        <a class="relic-card" href="https://sites.google.com/view/ii7q77ququq77ququququ/" target="_blank" rel="noopener">
+          <span class="relic-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 15l6-6"/>
+              <path d="M8 16.5a3.5 3.5 0 0 1 0-5l2-2"/>
+              <path d="M16 7.5a3.5 3.5 0 0 1 0 5l-2 2"/>
+            </svg>
+          </span>
+          <span class="relic-label">My Accounts</span>
+        </a>
+
+        <a class="relic-card" href="https://sites.google.com/view/alphakhan/home" target="_blank" rel="noopener">
+          <span class="relic-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 11l8-6 8 6"/>
+              <path d="M6 10v9h12v-9"/>
+              <line x1="10" y1="19" x2="10" y2="14"/>
+              <line x1="14" y1="19" x2="14" y2="14"/>
+            </svg>
+          </span>
+          <span class="relic-label">Website</span>
+        </a>
+
+      </div>
+    </div>
+  </section>
+
+  <p class="section-title">◆ Explore ◆</p>
+
+  <!-- EXPLORE -->
+  <section class="card relic-frame reveal">
+    <div class="card-body">
+      <nav class="nav-grid">
+
+        <a class="relic-card" href="https://sites.google.com/view/alphaexperiment/home" target="_blank" rel="noopener">
+          <span class="relic-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 3h4"/>
+              <path d="M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3"/>
+              <line x1="8.5" y1="14" x2="15.5" y2="14"/>
+            </svg>
+          </span>
+          <span class="relic-label">Alpha Experiment</span>
+        </a>
+
+        <a class="relic-card" href="https://sites.google.com/view/alpharomadan/home" target="_blank" rel="noopener">
+          <span class="relic-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 4a8 8 0 1 0 0 16 7 7 0 1 1 0-16z"/>
+            </svg>
+          </span>
+          <span class="relic-label">Alpha Ramadan</span>
+        </a>
+
+        <a class="relic-card" href="https://sites.google.com/view/animes-alpha-already-seen/home" target="_blank" rel="noopener">
+          <span class="relic-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 9c2-3 14-3 16 0c1 4-1 9-8 9s-9-5-8-9z"/>
+              <circle cx="9" cy="11" r="1"/>
+              <circle cx="15" cy="11" r="1"/>
+            </svg>
+          </span>
+          <span class="relic-label">Animes Seen</span>
+        </a>
+
+        <a class="relic-card" href="https://sites.google.com/view/alpha-profile/home" target="_blank" rel="noopener">
+          <span class="relic-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="8" r="3.2"/>
+              <path d="M5.5 20c1-4 4-6 6.5-6s5.5 2 6.5 6"/>
+            </svg>
+          </span>
+          <span class="relic-label">Profile</span>
+        </a>
+
+        <a class="relic-card" href="https://github.com/mdimrankhanalpha" target="_blank" rel="noopener">
+          <span class="relic-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <path d="M12 2C6.48 2 2 6.58 2 12.19c0 4.49 2.87 8.3 6.84 9.64.5.1.68-.22.68-.49 0-.24-.01-1.03-.01-1.87-2.78.62-3.37-1.21-3.37-1.21-.46-1.19-1.11-1.51-1.11-1.51-.91-.63.07-.62.07-.62 1 .07 1.53 1.05 1.53 1.05.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.13-4.56-5.02 0-1.11.39-2.02 1.03-2.73-.1-.26-.45-1.31.1-2.73 0 0 .84-.27 2.75 1.04a9.3 9.3 0 0 1 5 0c1.91-1.31 2.75-1.04 2.75-1.04.55 1.42.2 2.47.1 2.73.64.71 1.03 1.62 1.03 2.73 0 3.9-2.34 4.76-4.57 5.01.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.6.69.49A10.02 10.02 0 0 0 22 12.19C22 6.58 17.52 2 12 2z"/>
+            </svg>
+          </span>
+          <span class="relic-label">GitHub</span>
+        </a>
+
+        <a class="relic-card full" href="https://sites.google.com/view/alphakhan/email" target="_blank" rel="noopener">
+          <span class="relic-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3.5" y="6" width="17" height="12" rx="2"/>
+              <path d="M4 7l8 6 8-6"/>
+            </svg>
+          </span>
+          <span class="relic-label">Email</span>
+        </a>
+
+      </nav>
+    </div>
+  </section>
+
+  <div class="divider" style="margin:34px auto 24px;"><div class="line"></div><div class="diamond"></div><div class="line"></div></div>
+
+  <!-- COMMUNICATE -->
+  <section class="card relic-frame reveal">
+    <div class="card-body">
+      <p class="card-label">Communicate</p>
+      <a class="cta" href="https://docs.google.com/forms/d/e/1FAIpQLSd9kVaVnhrFMWWAUrrwVUOQEH9cYBnr02aqR_Wj-ObYtOHA8w/viewform" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 3L3 10.5l7 2.5 2 7L21 3z"/>
+          <path d="M10 13l5-6"/>
+        </svg>
+        <span>Communicate with Alpha Khan</span>
+      </a>
+    </div>
+  </section>
+
+  <div class="divider" style="margin:34px auto 24px;"><div class="line"></div><div class="diamond"></div><div class="diamond"></div><div class="diamond"></div><div class="line"></div></div>
+
+  <!-- STOPWATCH -->
+  <section class="card relic-frame reveal">
+    <div class="card-body">
+      <p class="card-label">Time Elapsed Since Genesis</p>
+      <div class="timer-inner">
+        <div class="timer-digits">
+          <div class="t-block"><div class="t-num" id="t-days">000</div><div class="t-lbl">Days</div></div>
+          <div class="t-block"><div class="t-num" id="t-hrs">00</div><div class="t-lbl">Hours</div></div>
+          <div class="t-block"><div class="t-num" id="t-min">00</div><div class="t-lbl">Min</div></div>
+          <div class="t-block"><div class="t-num" id="t-sec">00</div><div class="t-lbl">Sec</div></div>
+        </div>
+        <div class="scan-bar"><div class="scan-fill"></div></div>
+        <p class="timer-note">⚡ Unstoppable · Since 16 Dec 2025, 6:00 PM (BD) ⚡</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    ◆ Alpha Khan · All Rights Reserved ◆<br>
+    Khatam Edition
+  </footer>
+</div>
+
+<script>
+/* =========================================================
+   PERFECT TITLE FIT
+========================================================= */
+(function(){
+  const title = document.getElementById('title');
+  const wrap = title.parentElement;
+  function fitTitle(){
+    title.style.transform = 'scale(1)';
+    const available = wrap.clientWidth - 10;
+    const needed = title.scrollWidth;
+    if(needed > available){
+      title.style.transform = `scale(${available / needed})`;
+    }
+  }
+  window.addEventListener('load', fitTitle);
+  window.addEventListener('resize', fitTitle);
+  setTimeout(fitTitle, 300);
+})();
+
+/* =========================================================
+   STOPWATCH — same logic, same start date
+========================================================= */
+const START = new Date("2025-12-16T18:00:00+06:00").getTime();
+function tick(){
+  let diff = Date.now() - START;
+  if(diff < 0) diff = 0;
+  const totalSeconds = Math.floor(diff / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  document.getElementById('t-days').textContent = String(days);
+  document.getElementById('t-hrs').textContent = String(hours).padStart(2,'0');
+  document.getElementById('t-min').textContent = String(minutes).padStart(2,'0');
+  document.getElementById('t-sec').textContent = String(seconds).padStart(2,'0');
+}
+tick();
+setInterval(tick, 1000);
+
+/* =========================================================
+   3D TILT + SHEEN ON RELIC CARDS
+========================================================= */
+(function(){
+  const canHover = window.matchMedia('(hover: hover)').matches;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!canHover || reduceMotion) return;
+
+  document.querySelectorAll('.relic-card').forEach(card=>{
+    card.addEventListener('pointermove', e=>{
+      const r = card.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width;
+      const py = (e.clientY - r.top) / r.height;
+      const rx = (0.5 - py) * 9;
+      const ry = (px - 0.5) * 9;
+      card.style.transform = `perspective(800px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) translateZ(4px)`;
+      card.style.setProperty('--mx', `${px * 100}%`);
+      card.style.setProperty('--my', `${py * 100}%`);
+    });
+    card.addEventListener('pointerleave', ()=>{
+      card.style.transform = '';
+    });
+  });
+})();
+
+/* =========================================================
+   SCROLL REVEAL
+========================================================= */
+(function(){
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const items = document.querySelectorAll('.reveal');
+  if(reduceMotion || !('IntersectionObserver' in window)){
+    items.forEach(el=>el.classList.add('in'));
+    return;
+  }
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){
+        entry.target.classList.add('in');
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold:.15, rootMargin:'0px 0px -60px 0px' });
+  items.forEach(el=>io.observe(el));
+})();
+
+/* =========================================================
+   FLOATING EMBERS
+========================================================= */
+(function(){
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduceMotion) return;
+  const host = document.getElementById('embers');
+  const COUNT = 26;
+  for(let i=0;i<COUNT;i++){
+    const e = document.createElement('div');
+    e.className = 'ember';
+    const size = 1.5 + Math.random()*3;
+    e.style.width = size+'px';
+    e.style.height = size+'px';
+    e.style.left = (Math.random()*100)+'%';
+    e.style.setProperty('--drift', (Math.random()*80-40)+'px');
+    const dur = 9 + Math.random()*10;
+    e.style.animationDuration = dur+'s';
+    e.style.animationDelay = (-Math.random()*dur)+'s';
+    if(Math.random() > 0.55){
+      e.style.background = 'radial-gradient(circle, #f0d9a0, transparent 70%)';
+    }
+    host.appendChild(e);
+  }
+})();
+
+/* =========================================================
+   ISLAMIC LATTICE CANVAS BACKDROP (8-point star tessellation, slow drift)
+========================================================= */
+(function(){
+  const canvas = document.getElementById('latticeCanvas');
+  const ctx = canvas.getContext('2d');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let w, h, dpr;
+
+  function resize(){
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = window.innerWidth; h = window.innerHeight;
+    canvas.width = w*dpr; canvas.height = h*dpr;
+    canvas.style.width = w+'px'; canvas.style.height = h+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const TILE = 96; // size of one star module
+
+  function drawStarTile(cx, cy, r, strokeStyle){
+    // eight point star outline made of two squares
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.strokeStyle = strokeStyle;
+    ctx.lineWidth = 1;
+    for(let rot=0; rot<2; rot++){
+      ctx.rotate(rot===0 ? 0 : Math.PI/4);
+      ctx.beginPath();
+      for(let i=0;i<4;i++){
+        const a = (Math.PI/2)*i;
+        const x = Math.cos(a)*r, y = Math.sin(a)*r;
+        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  let offset = 0;
+  function render(){
+    ctx.clearRect(0,0,w,h);
+    const cols = Math.ceil(w/TILE)+2;
+    const rows = Math.ceil(h/TILE)+2;
+    for(let iy=-1; iy<rows; iy++){
+      for(let ix=-1; ix<cols; ix++){
+        const cx = ix*TILE + (iy%2? TILE/2:0) + (offset%TILE);
+        const cy = iy*(TILE*0.75);
+        const goldish = (ix+iy)%3===0;
+        drawStarTile(cx, cy, TILE*0.34, goldish ? 'rgba(199,154,82,0.16)' : 'rgba(0,201,167,0.12)');
+      }
+    }
+  }
+  render();
+
+  if(!reduceMotion){
+    function loop(){
+      offset += 0.035;
+      render();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  }
+})();
+</script>
+
+</body>
+</html>

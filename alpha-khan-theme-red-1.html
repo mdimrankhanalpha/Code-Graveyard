@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Alpha Khan</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cinzel+Decorative:wght@700;900&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+<style>
+/* =========================================================
+   RESET
+========================================================= */
+*,*::before,*::after{ margin:0; padding:0; box-sizing:border-box; }
+
+:root{
+  /* ---- token system : "Crimson Eclipse" red & black ---- */
+  --void:        #060002;
+  --abyss:       #0b0103;
+  --panel-a:     rgba(20,3,6,.92);
+  --panel-b:     rgba(6,1,2,.95);
+
+  --crimson-deep:   #4a000a;
+  --crimson-core:   #d6001f;
+  --crimson-bright: #ff2d46;
+
+  --gold:        #c79a52;
+  --gold-bright: #f0d9a0;
+  --gold-soft:   rgba(199,154,82,.45);
+
+  --bone:        #f4ece6;
+  --ash:         rgba(244,236,230,.46);
+
+  --radius:22px;
+}
+
+html{ scroll-behavior:smooth; }
+
+body{
+  min-height:100vh;
+  font-family:'Cormorant Garamond', serif;
+  color:var(--bone);
+  background:
+    radial-gradient(circle at 50% -6%, rgba(214,0,31,.20), transparent 34%),
+    radial-gradient(circle at 90% 12%, rgba(199,154,82,.08), transparent 30%),
+    radial-gradient(circle at 6% 40%, rgba(214,0,31,.09), transparent 28%),
+    linear-gradient(180deg, var(--abyss) 0%, var(--void) 100%);
+  overflow-x:hidden;
+  position:relative;
+}
+
+/* =========================================================
+   GEOMETRIC LATTICE BACKDROP
+========================================================= */
+.lattice{
+  position:fixed; inset:0; z-index:0; pointer-events:none; opacity:.7;
+}
+.lattice canvas{ width:100%; height:100%; display:block; }
+
+/* floating embers layer */
+.embers{ position:fixed; inset:0; z-index:1; pointer-events:none; overflow:hidden; }
+.ember{
+  position:absolute; bottom:-6%; border-radius:50%;
+  background:radial-gradient(circle, var(--crimson-bright), transparent 70%);
+  filter:blur(.3px);
+  animation-name:emberRise;
+  animation-timing-function:linear;
+  animation-iteration-count:infinite;
+  opacity:0;
+}
+@keyframes emberRise{
+  0%{ transform:translateY(0) translateX(0); opacity:0; }
+  8%{ opacity:.85; }
+  92%{ opacity:.5; }
+  100%{ transform:translateY(-112vh) translateX(var(--drift,20px)); opacity:0; }
+}
+
+/* thunderclap: a real, physical-feeling jolt tied to each strike */
+body.shake{ animation:shakeKey 240ms cubic-bezier(.36,.07,.19,.97) both; }
+@keyframes shakeKey{
+  12%{ transform:translate3d(-2px,1px,0); }
+  24%{ transform:translate3d(3px,-1px,0); }
+  36%{ transform:translate3d(-3px,0,0); }
+  48%{ transform:translate3d(2px,1px,0); }
+  60%{ transform:translate3d(-1px,-1px,0); }
+  100%{ transform:translate3d(0,0,0); }
+}
+
+/* =========================================================
+   PAGE WRAP
+========================================================= */
+.page{
+  position:relative; z-index:2;
+  width:min(100%, 1180px);
+  margin:0 auto;
+  padding: clamp(34px,5vw,64px) clamp(14px,3vw,28px) 100px;
+}
+
+/* =========================================================
+   HERO + CRIMSON ECLIPSE SIGIL (unique signature animation)
+========================================================= */
+.hero{
+  width:100%; min-height:42vh;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; padding-top:30px; padding-bottom:26px; gap:22px;
+}
+
+.sigil{
+  width:clamp(150px,20vw,230px);
+  height:clamp(150px,20vw,230px);
+  position:relative;
+  perspective:1000px;
+}
+
+/* corona: two counter-rotating layers of radiating spikes, red + gold */
+.corona{
+  position:absolute; inset:-6%; margin:auto; border-radius:50%;
+  pointer-events:none; mix-blend-mode:screen;
+}
+.corona-a{
+  background:repeating-conic-gradient(from 0deg, rgba(255,45,70,.55) 0deg 3deg, transparent 3deg 16deg);
+  filter:blur(1.5px);
+  animation:coronaSpin 16s linear infinite;
+}
+.corona-b{
+  inset:6%;
+  background:repeating-conic-gradient(from 12deg, rgba(199,154,82,.4) 0deg 2deg, transparent 2deg 20deg);
+  filter:blur(1px);
+  animation:coronaSpin 22s linear infinite reverse;
+}
+@keyframes coronaSpin{ from{ transform:rotate(0deg); } to{ transform:rotate(360deg); } }
+
+/* orbiting embers around the eclipse */
+.orbit{ position:absolute; inset:0; margin:auto; border-radius:50%; pointer-events:none; }
+.orbit .dot{ position:absolute; top:0; left:50%; width:7px; height:7px; margin-left:-3.5px; border-radius:50%; }
+.orbit1{ width:118%; height:118%; animation:orbitSpin 8s linear infinite; }
+.orbit1 .dot{ background:var(--gold-bright); box-shadow:0 0 12px var(--gold-bright); }
+.orbit2{ width:150%; height:150%; animation:orbitSpin 13s linear infinite reverse; }
+.orbit2 .dot{ background:var(--crimson-bright); box-shadow:0 0 12px var(--crimson-bright); }
+.orbit2 .dot:last-child{ top:auto; bottom:0; }
+@keyframes orbitSpin{ from{ transform:rotate(0deg); } to{ transform:rotate(360deg); } }
+
+/* the eclipse disc itself: 3D rings still present for depth, now a solar-eclipse core */
+.sigil-stage{
+  width:100%; height:100%; position:relative;
+  transform-style:preserve-3d;
+  animation:sigilSpin 24s linear infinite;
+}
+@keyframes sigilSpin{ from{ transform:rotateY(0deg) rotateX(12deg);} to{ transform:rotateY(360deg) rotateX(12deg);} }
+
+.ring{ position:absolute; inset:0; border-radius:50%; transform-style:preserve-3d; }
+.ring-a{ border:1.5px solid rgba(199,154,82,.55); transform:rotateX(90deg); box-shadow:0 0 20px rgba(199,154,82,.22); }
+.ring-b{ border:1.5px solid rgba(214,0,31,.7); transform:rotateY(58deg); box-shadow:0 0 24px rgba(214,0,31,.32); }
+.ring-c{ border:1.5px solid rgba(255,45,70,.48); transform:rotateY(-58deg) rotateX(28deg); box-shadow:0 0 22px rgba(255,45,70,.24); }
+
+.eclipse-core{
+  position:absolute; inset:0; margin:auto;
+  width:36%; height:36%; border-radius:50%;
+  transform:translateZ(28px);
+  background:radial-gradient(circle at 34% 30%, #ff4f68, #8a0018 55%, #1a0004 100%);
+  box-shadow:0 0 34px rgba(255,45,70,.6), inset 0 0 14px rgba(0,0,0,.65);
+  animation:corePulse 4.4s ease-in-out infinite;
+}
+.eclipse-core::before{
+  /* thin gold rim, like a corona ring caught at the edge of totality */
+  content:"";
+  position:absolute; inset:-14%; border-radius:50%;
+  border:1px solid rgba(240,217,160,.55);
+  box-shadow:0 0 16px rgba(240,217,160,.3);
+}
+@keyframes corePulse{ 0%,100%{ filter:brightness(1);} 50%{ filter:brightness(1.32);} }
+
+.ornament,.divider{ width:min(100%,640px); display:flex; align-items:center; justify-content:center; gap:12px; }
+.line{ flex:1; height:1px; background:linear-gradient(90deg, transparent, rgba(214,0,31,.35), transparent); }
+.diamond{ width:8px; height:8px; transform:rotate(45deg); background:linear-gradient(135deg, var(--gold-bright), var(--gold)); box-shadow:0 0 12px rgba(199,154,82,.35); }
+
+.title-wrap{ width:100%; display:flex; justify-content:center; align-items:center; overflow:visible; padding-inline:10px; position:relative; }
+#title{
+  display:block; width:100%; max-width:100%; text-align:center; white-space:nowrap; line-height:.92;
+  font-family:'Cinzel Decorative', serif; font-weight:900;
+  font-size:clamp(2rem,7vw,5.6rem);
+  letter-spacing:clamp(.05em,.7vw,.18em);
+  position:relative;
+  background:linear-gradient(100deg, var(--gold) 0%, var(--gold-bright) 16%, var(--bone) 30%, var(--crimson-bright) 48%, var(--gold-bright) 66%, var(--gold) 82%, var(--crimson-bright) 100%);
+  background-size:280% 100%;
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  filter:drop-shadow(0 0 18px rgba(214,0,31,.22));
+  animation:titleShimmer 7s ease-in-out infinite;
+  transform-origin:center center;
+}
+@keyframes titleShimmer{
+  0%{ background-position:0% 50%; }
+  50%{ background-position:100% 50%; }
+  100%{ background-position:0% 50%; }
+}
+.subtitle{
+  font-family:'Cormorant Garamond', serif; font-style:italic; font-weight:600;
+  font-size:clamp(.85rem,1.6vw,1.15rem);
+  letter-spacing:.32em;
+  color:var(--crimson-bright);
+  text-transform:uppercase;
+  text-align:center;
+  opacity:.9;
+  text-shadow:0 0 14px rgba(214,0,31,.28);
+}
+
+/* =========================================================
+   SECTION LABEL
+========================================================= */
+.section-title{
+  margin:32px auto 16px; text-align:center;
+  font-family:'JetBrains Mono', monospace;
+  font-size:clamp(.62rem,1vw,.75rem);
+  letter-spacing:.5em;
+  color:var(--ash); text-transform:uppercase;
+}
+
+/* =========================================================
+   RELIC FRAME + REVEAL
+========================================================= */
+.relic-frame{ position:relative; }
+.relic-frame::before{
+  content:""; position:absolute; inset:12px; pointer-events:none; z-index:0;
+  background:
+    linear-gradient(rgba(199,154,82,.5),rgba(199,154,82,.5)) top left/16px 1px no-repeat,
+    linear-gradient(rgba(199,154,82,.5),rgba(199,154,82,.5)) top left/1px 16px no-repeat,
+    linear-gradient(rgba(214,0,31,.5),rgba(214,0,31,.5)) top right/16px 1px no-repeat,
+    linear-gradient(rgba(214,0,31,.5),rgba(214,0,31,.5)) top right/1px 16px no-repeat,
+    linear-gradient(rgba(214,0,31,.5),rgba(214,0,31,.5)) bottom left/16px 1px no-repeat,
+    linear-gradient(rgba(214,0,31,.5),rgba(214,0,31,.5)) bottom left/1px 16px no-repeat,
+    linear-gradient(rgba(199,154,82,.5),rgba(199,154,82,.5)) bottom right/16px 1px no-repeat,
+    linear-gradient(rgba(199,154,82,.5),rgba(199,154,82,.5)) bottom right/1px 16px no-repeat;
+}
+
+.reveal{ opacity:0; transform:translateY(26px); transition:opacity .7s ease, transform .7s ease; }
+.reveal.in{ opacity:1; transform:translateY(0); }
+
+/* =========================================================
+   CARD (panel)
+========================================================= */
+.card{
+  position:relative;
+  width:min(100%,1000px);
+  margin-inline:auto;
+  border-radius:var(--radius);
+  border:1px solid rgba(214,0,31,.16);
+  background:linear-gradient(180deg, var(--panel-a), var(--panel-b));
+  box-shadow:0 10px 44px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.02);
+  overflow:hidden;
+}
+.card-body{ position:relative; z-index:1; padding:clamp(20px,3vw,30px); }
+.card-label{
+  text-align:center; text-transform:uppercase; color:var(--ash);
+  font-family:'JetBrains Mono', monospace;
+  letter-spacing:.4em; font-size:clamp(.58rem,1vw,.68rem);
+  margin-bottom:20px;
+}
+
+/* =========================================================
+   RELIC CARD — with traveling gold/crimson border trace on hover
+========================================================= */
+.relic-card{
+  position:relative;
+  display:flex;
+  text-decoration:none;
+  color:var(--bone);
+  border-radius:16px;
+  overflow:hidden;
+  transform-style:preserve-3d;
+  will-change:transform;
+  background:linear-gradient(160deg, rgba(24,4,7,.94), rgba(8,1,2,.96));
+  box-shadow:0 14px 32px rgba(0,0,0,.42);
+  transition:box-shadow .25s ease, transform .25s ease;
+}
+.relic-card::after{
+  content:""; position:absolute; inset:0; border-radius:inherit; padding:1px;
+  background:conic-gradient(from var(--ang,0deg), var(--gold) 0%, transparent 18%, transparent 82%, var(--crimson-core) 100%);
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor; mask-composite:exclude;
+  opacity:.55; pointer-events:none;
+  animation:borderTrace 5.5s linear infinite;
+}
+@keyframes borderTrace{ from{ --ang:0deg; } to{ --ang:360deg; } }
+.relic-card::before{
+  content:"";
+  position:absolute; inset:0;
+  background:radial-gradient(220px circle at var(--mx,50%) var(--my,50%), rgba(214,0,31,.18), transparent 60%);
+  opacity:0; transition:opacity .35s ease; pointer-events:none; z-index:1;
+}
+.relic-card:hover,
+.relic-card:focus-visible{
+  box-shadow:0 18px 46px rgba(214,0,31,.22), 0 0 0 1px rgba(199,154,82,.18);
+}
+.relic-card:hover::before,
+.relic-card:focus-visible::before{ opacity:1; }
+.relic-card:focus-visible{ outline:2px solid var(--gold-bright); outline-offset:3px; }
+.relic-card:active{ transform:scale(.98) !important; }
+
+.relic-icon{
+  flex-shrink:0;
+  display:grid; place-items:center;
+  border-radius:12px;
+  background:rgba(214,0,31,.08);
+  border:1px solid rgba(199,154,82,.22);
+  box-shadow:0 0 16px rgba(214,0,31,.14), inset 0 0 8px rgba(0,0,0,.4);
+  color:var(--gold-bright);
+  position:relative; z-index:2;
+}
+.relic-icon svg{ width:55%; height:55%; }
+
+.relic-label{
+  font-family:'Cinzel', serif; font-weight:600;
+  letter-spacing:.06em; line-height:1.3;
+  color:var(--bone);
+  position:relative; z-index:2;
+}
+.relic-sub{
+  font-family:'Cormorant Garamond', serif; font-style:italic; color:var(--ash);
+  font-size:.82rem; letter-spacing:.04em; margin-top:2px;
+  position:relative; z-index:2;
+}
+
+/* --- featured tiles (Open My Content): icon over label --- */
+.feature-row{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:14px;
+}
+.feature-row .relic-card{
+  flex-direction:column; align-items:center; justify-content:center;
+  gap:14px; text-align:center; padding:26px 16px;
+}
+.feature-row .relic-icon{ width:52px; height:52px; }
+.feature-row .relic-label{ font-size:clamp(.78rem,1.2vw,.95rem); }
+
+/* --- explore directory rows: icon beside label --- */
+.nav-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.nav-grid .relic-card{
+  align-items:center; gap:16px; padding:16px 18px; min-height:72px;
+}
+.nav-grid .relic-icon{ width:44px; height:44px; }
+.nav-grid .relic-label{ font-size:clamp(.74rem,1vw,.9rem); }
+.nav-grid .full{ grid-column:1/-1; }
+
+/* =========================================================
+   COMMUNICATE — primary gold CTA
+========================================================= */
+.cta{
+  position:relative;
+  display:flex; align-items:center; justify-content:center; gap:14px;
+  width:100%; min-height:66px;
+  border-radius:14px;
+  text-decoration:none;
+  font-family:'Cinzel', serif; font-weight:700;
+  letter-spacing:.08em;
+  font-size:clamp(.8rem,1.3vw,1rem);
+  color:#1a0002;
+  background:linear-gradient(135deg, #f3d394, var(--gold) 42%, var(--crimson-core) 130%);
+  box-shadow:0 14px 34px rgba(214,0,31,.22), inset 0 0 0 1px rgba(255,255,255,.28);
+  overflow:hidden;
+  transition:transform .2s ease, box-shadow .2s ease, filter .2s ease;
+}
+.cta::before{
+  content:""; position:absolute; top:0; left:-40%; width:35%; height:100%;
+  background:linear-gradient(115deg, transparent, rgba(255,255,255,.55), transparent);
+  transform:skewX(-18deg);
+  animation:ctaSheen 3.4s ease-in-out infinite;
+}
+@keyframes ctaSheen{ 0%{ left:-40%; } 55%,100%{ left:130%; } }
+.cta svg{ width:20px; height:20px; position:relative; z-index:1; }
+.cta span{ position:relative; z-index:1; }
+.cta:hover{ transform:translateY(-2px); filter:brightness(1.08); box-shadow:0 18px 42px rgba(214,0,31,.32); }
+.cta:active{ transform:translateY(0) scale(.98); }
+.cta:focus-visible{ outline:2px solid var(--crimson-bright); outline-offset:3px; }
+
+/* =========================================================
+   TIMER
+========================================================= */
+.timer-inner{ position:relative; display:flex; flex-direction:column; gap:20px; align-items:center; padding-top:6px; }
+.timer-digits{ width:100%; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; align-items:center; }
+.t-block{
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; min-width:0;
+  padding:14px 6px 12px; border-radius:14px;
+  background:radial-gradient(120% 120% at 50% 0%, rgba(214,0,31,.09), transparent 70%);
+  border:1px solid rgba(199,154,82,.18);
+}
+.t-num{
+  width:100%; text-align:center;
+  font-family:'JetBrains Mono', monospace; font-weight:700;
+  font-size:clamp(1.3rem,4.6vw,3.4rem); line-height:1; letter-spacing:.03em;
+  color:#f7f2ef; text-shadow:0 0 14px rgba(214,0,31,.3);
+}
+.t-lbl{ text-transform:uppercase; color:var(--ash); font-family:'JetBrains Mono',monospace; font-size:clamp(.42rem,.8vw,.6rem); letter-spacing:.32em; }
+.scan-bar{ width:100%; height:2px; border-radius:999px; overflow:hidden; background:rgba(214,0,31,.1); }
+.scan-fill{ width:32%; height:100%; background:linear-gradient(90deg, transparent, rgba(255,45,70,.9), transparent); box-shadow:0 0 14px rgba(255,45,70,.3); animation:scanMove 2.8s linear infinite; }
+@keyframes scanMove{ from{ transform:translateX(-130%);} to{ transform:translateX(330%);} }
+.timer-note{ text-align:center; color:rgba(255,90,105,.6); text-transform:uppercase; font-family:'JetBrains Mono',monospace; font-size:clamp(.4rem,.78vw,.58rem); letter-spacing:.22em; line-height:1.8; }
+
+/* =========================================================
+   FOOTER
+========================================================= */
+footer{
+  margin-top:70px; text-align:center; color:rgba(214,0,31,.4);
+  font-family:'JetBrains Mono', monospace;
+  text-transform:uppercase; letter-spacing:.32em;
+  font-size:clamp(.4rem,.78vw,.58rem); line-height:2;
+}
+
+/* =========================================================
+   REDUCED MOTION
+========================================================= */
+@media (prefers-reduced-motion: reduce){
+  .sigil-stage,.eclipse-core,#title,.ember,.scan-fill,.relic-card::after,.cta::before,.corona-a,.corona-b,.orbit1,.orbit2{ animation:none !important; }
+  .reveal{ opacity:1; transform:none; transition:none; }
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+@media (max-width:900px){
+  .feature-row{ grid-template-columns:1fr; }
+  .nav-grid{ grid-template-columns:1fr; }
+  .nav-grid .full{ grid-column:auto; }
+  .hero{ min-height:32vh; }
+}
+@media (max-width:560px){
+  .timer-digits{ gap:8px; }
+  .t-num{ font-size:clamp(1rem,8vw,1.7rem); }
+}
+</style>
+</head>
+<body>
+
+<div class="lattice"><canvas id="latticeCanvas"></canvas></div>
+<div class="embers" id="embers"></div>
+
+<div class="page">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="sigil">
+      <div class="corona corona-a"></div>
+      <div class="corona corona-b"></div>
+      <div class="orbit orbit1"><span class="dot"></span></div>
+      <div class="orbit orbit2"><span class="dot"></span><span class="dot"></span></div>
+      <div class="sigil-stage">
+        <div class="ring ring-a"></div>
+        <div class="ring ring-b"></div>
+        <div class="ring ring-c"></div>
+        <div class="eclipse-core"></div>
+      </div>
+    </div>
+
+    <div class="ornament">
+      <div class="line"></div>
+      <div class="diamond"></div>
+      <div class="diamond"></div>
+      <div class="diamond"></div>
+      <div class="line"></div>
+    </div>
+
+    <div class="title-wrap"><h1 id="title">ALPHA KHAN</h1></div>
+    <p class="subtitle">Realm · Of · The · Alpha</p>
+  </section>
+
+  <div class="divider" style="margin-bottom:28px;">
+    <div class="line"></div><div class="diamond"></div><div class="diamond"></div><div class="diamond"></div><div class="line"></div>
+  </div>
+
+  <!-- OPEN MY CONTENT -->
+  <section class="card relic-frame reveal">
+    <div class="card-body">
+      <p class="card-label">Open My Content</p>
+      <div class="feature-row">
+
+        <a class="relic-card" href="https://sites.google.com/view/alphakhanpost/" target="_blank" rel="noopener">
+          <span class="relic-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 4h9a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H6"/>
+              <path d="M6 4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2"/>
+              <line x1="9" y1="9" x2="15" y2="9"/>
+              <line x1="9" y1="13" x2="15" y2="13"/>
+            </svg>
+          </span>
+          <span class="relic-label">My Post</span>
+        </a>
+
+        <a class="relic-card" href="https://sites.google.com/view/ii7q77ququq77ququququ/" target="_blank" rel="noopener">
+          <span class="relic-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 15l6-6"/>
+              <path d="M8 16.5a3.5 3.5 0 0 1 0-5l2-2"/>
+              <path d="M16 7.5a3.5 3.5 0 0 1 0 5l-2 2"/>
+            </svg>
+          </span>
+          <span class="relic-label">My Accounts</span>
+        </a>
+
+        <a class="relic-card" href="https://sites.google.com/view/alphakhan/home" target="_blank" rel="noopener">
+          <span class="relic-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 11l8-6 8 6"/>
+              <path d="M6 10v9h12v-9"/>
+              <line x1="10" y1="19" x2="10" y2="14"/>
+              <line x1="14" y1="19" x2="14" y2="14"/>
+            </svg>
+          </span>
+          <span class="relic-label">Website</span>
+        </a>
+
+      </div>
+    </div>
+  </section>
+
+  <p class="section-title">◆ Explore ◆</p>
+
+  <!-- EXPLORE -->
+  <section class="card relic-frame reveal">
+    <div class="card-body">
+      <nav class="nav-grid">
+
+        <a class="relic-card" href="https://sites.google.com/view/alphaexperiment/home" target="_blank" rel="noopener">
+          <span class="relic-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 3h4"/>
+              <path d="M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3"/>
+              <line x1="8.5" y1="14" x2="15.5" y2="14"/>
+            </svg>
+          </span>
+          <span class="relic-label">Alpha Experiment</span>
+        </a>
+
+        <a class="relic-card" href="https://sites.google.com/view/alpharomadan/home" target="_blank" rel="noopener">
+          <span class="relic-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 4a8 8 0 1 0 0 16 7 7 0 1 1 0-16z"/>
+            </svg>
+          </span>
+          <span class="relic-label">Alpha Ramadan</span>
+        </a>
+
+        <a class="relic-card" href="https://sites.google.com/view/alpha-profile/home" target="_blank" rel="noopener">
+          <span class="relic-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="8" r="3.2"/>
+              <path d="M5.5 20c1-4 4-6 6.5-6s5.5 2 6.5 6"/>
+            </svg>
+          </span>
+          <span class="relic-label">Profile</span>
+        </a>
+
+        <a class="relic-card" href="https://github.com/mdimrankhanalpha" target="_blank" rel="noopener">
+          <span class="relic-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <path d="M12 2C6.48 2 2 6.58 2 12.19c0 4.49 2.87 8.3 6.84 9.64.5.1.68-.22.68-.49 0-.24-.01-1.03-.01-1.87-2.78.62-3.37-1.21-3.37-1.21-.46-1.19-1.11-1.51-1.11-1.51-.91-.63.07-.62.07-.62 1 .07 1.53 1.05 1.53 1.05.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.13-4.56-5.02 0-1.11.39-2.02 1.03-2.73-.1-.26-.45-1.31.1-2.73 0 0 .84-.27 2.75 1.04a9.3 9.3 0 0 1 5 0c1.91-1.31 2.75-1.04 2.75-1.04.55 1.42.2 2.47.1 2.73.64.71 1.03 1.62 1.03 2.73 0 3.9-2.34 4.76-4.57 5.01.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.6.69.49A10.02 10.02 0 0 0 22 12.19C22 6.58 17.52 2 12 2z"/>
+            </svg>
+          </span>
+          <span class="relic-label">GitHub</span>
+        </a>
+
+        <a class="relic-card full" href="https://sites.google.com/view/alphakhan/email" target="_blank" rel="noopener">
+          <span class="relic-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3.5" y="6" width="17" height="12" rx="2"/>
+              <path d="M4 7l8 6 8-6"/>
+            </svg>
+          </span>
+          <span class="relic-label">Email</span>
+        </a>
+
+      </nav>
+    </div>
+  </section>
+
+  <div class="divider" style="margin:34px auto 24px;"><div class="line"></div><div class="diamond"></div><div class="line"></div></div>
+
+  <!-- COMMUNICATE -->
+  <section class="card relic-frame reveal">
+    <div class="card-body">
+      <p class="card-label">Communicate</p>
+      <a class="cta" href="https://docs.google.com/forms/d/e/1FAIpQLSd9kVaVnhrFMWWAUrrwVUOQEH9cYBnr02aqR_Wj-ObYtOHA8w/viewform" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 3L3 10.5l7 2.5 2 7L21 3z"/>
+          <path d="M10 13l5-6"/>
+        </svg>
+        <span>Communicate with Alpha Khan</span>
+      </a>
+    </div>
+  </section>
+
+  <div class="divider" style="margin:34px auto 24px;"><div class="line"></div><div class="diamond"></div><div class="diamond"></div><div class="diamond"></div><div class="line"></div></div>
+
+  <!-- STOPWATCH -->
+  <section class="card relic-frame reveal">
+    <div class="card-body">
+      <p class="card-label">Time Elapsed Since Genesis</p>
+      <div class="timer-inner">
+        <div class="timer-digits">
+          <div class="t-block"><div class="t-num" id="t-days">000</div><div class="t-lbl">Days</div></div>
+          <div class="t-block"><div class="t-num" id="t-hrs">00</div><div class="t-lbl">Hours</div></div>
+          <div class="t-block"><div class="t-num" id="t-min">00</div><div class="t-lbl">Min</div></div>
+          <div class="t-block"><div class="t-num" id="t-sec">00</div><div class="t-lbl">Sec</div></div>
+        </div>
+        <div class="scan-bar"><div class="scan-fill"></div></div>
+        <p class="timer-note">⚡ Unstoppable · Since 16 Dec 2025, 6:00 PM (BD) ⚡</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    ◆ Alpha Khan · All Rights Reserved ◆<br>
+    Crimson Eclipse Edition
+  </footer>
+</div>
+
+<script>
+/* =========================================================
+   PERFECT TITLE FIT
+========================================================= */
+(function(){
+  const title = document.getElementById('title');
+  const wrap = title.parentElement;
+  function fitTitle(){
+    title.style.transform = 'scale(1)';
+    const available = wrap.clientWidth - 10;
+    const needed = title.scrollWidth;
+    if(needed > available){
+      title.style.transform = `scale(${available / needed})`;
+    }
+  }
+  window.addEventListener('load', fitTitle);
+  window.addEventListener('resize', fitTitle);
+  setTimeout(fitTitle, 300);
+})();
+
+/* =========================================================
+   STOPWATCH — same logic, same start date
+========================================================= */
+const START = new Date("2025-12-16T18:00:00+06:00").getTime();
+function tick(){
+  let diff = Date.now() - START;
+  if(diff < 0) diff = 0;
+  const totalSeconds = Math.floor(diff / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  document.getElementById('t-days').textContent = String(days);
+  document.getElementById('t-hrs').textContent = String(hours).padStart(2,'0');
+  document.getElementById('t-min').textContent = String(minutes).padStart(2,'0');
+  document.getElementById('t-sec').textContent = String(seconds).padStart(2,'0');
+}
+tick();
+setInterval(tick, 1000);
+
+/* =========================================================
+   3D TILT + SHEEN ON RELIC CARDS
+========================================================= */
+(function(){
+  const canHover = window.matchMedia('(hover: hover)').matches;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!canHover || reduceMotion) return;
+
+  document.querySelectorAll('.relic-card').forEach(card=>{
+    card.addEventListener('pointermove', e=>{
+      const r = card.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width;
+      const py = (e.clientY - r.top) / r.height;
+      const rx = (0.5 - py) * 9;
+      const ry = (px - 0.5) * 9;
+      card.style.transform = `perspective(800px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) translateZ(4px)`;
+      card.style.setProperty('--mx', `${px * 100}%`);
+      card.style.setProperty('--my', `${py * 100}%`);
+    });
+    card.addEventListener('pointerleave', ()=>{
+      card.style.transform = '';
+    });
+  });
+})();
+
+/* =========================================================
+   SCROLL REVEAL
+========================================================= */
+(function(){
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const items = document.querySelectorAll('.reveal');
+  if(reduceMotion || !('IntersectionObserver' in window)){
+    items.forEach(el=>el.classList.add('in'));
+    return;
+  }
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){
+        entry.target.classList.add('in');
+        io.unobserve(entry.target);
+      }
+    });
+  }, { threshold:.15, rootMargin:'0px 0px -60px 0px' });
+  items.forEach(el=>io.observe(el));
+})();
+
+/* =========================================================
+   FLOATING EMBERS
+========================================================= */
+(function(){
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduceMotion) return;
+  const host = document.getElementById('embers');
+  const COUNT = 26;
+  for(let i=0;i<COUNT;i++){
+    const e = document.createElement('div');
+    e.className = 'ember';
+    const size = 1.5 + Math.random()*3;
+    e.style.width = size+'px';
+    e.style.height = size+'px';
+    e.style.left = (Math.random()*100)+'%';
+    e.style.setProperty('--drift', (Math.random()*80-40)+'px');
+    const dur = 9 + Math.random()*10;
+    e.style.animationDuration = dur+'s';
+    e.style.animationDelay = (-Math.random()*dur)+'s';
+    if(Math.random() > 0.55){
+      e.style.background = 'radial-gradient(circle, #f0d9a0, transparent 70%)';
+    }
+    host.appendChild(e);
+  }
+})();
+
+/* =========================================================
+   RED STORM DISASTER BACKDROP v2 — realistic strike physics,
+   directional blood spatter, tapered glossy drips, streaked rain
+========================================================= */
+(function(){
+  const canvas = document.getElementById('latticeCanvas');
+  const ctx = canvas.getContext('2d');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let w, h, dpr;
+
+  let splatters = [];
+  function resize(){
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = window.innerWidth; h = window.innerHeight;
+    canvas.width = w*dpr; canvas.height = h*dpr;
+    canvas.style.width = w+'px'; canvas.style.height = h+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    buildSplatters();
+  }
+
+  /* ---- dried blood spatter: directional teardrops from an impact point,
+     sized on a rough power-law (a few big drops, many tiny satellite flecks) ---- */
+  function buildSplatters(){
+    splatters = [];
+    const IMPACTS = 4;
+    for(let i=0;i<IMPACTS;i++){
+      const ix = w*0.08 + Math.random()*w*0.84;
+      const iy = h*0.04 + Math.random()*h*0.46;
+      const dir = Math.random()*Math.PI*2;
+      const drops = [];
+      const n = 14 + Math.floor(Math.random()*10);
+      for(let k=0;k<n;k++){
+        const spread = (Math.random()-0.5) * 2.4;
+        const a = dir + spread;
+        const rnd = Math.random();
+        const dist = 8 + (rnd*rnd)*90;               // most drops land near the impact
+        const size = 1.2 + (1-rnd)*(1-rnd)*9;         // few big, many small
+        drops.push({
+          x: Math.cos(a)*dist, y: Math.sin(a)*dist,
+          size, elong: 1 + (dist/60), angle: a,
+          alpha: 0.35 + Math.random()*0.35
+        });
+      }
+      splatters.push({ x:ix, y:iy, drops, coreR: 5 + Math.random()*6 });
+    }
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  /* ---- storm clouds : hard-edged, brighten briefly when lightning is near ---- */
+  const clouds = Array.from({length:7}, ()=>({
+    x: Math.random()*1.4 - 0.2,
+    y: Math.random()*0.30,
+    rx: 0.26 + Math.random()*0.22,
+    ry: 0.09 + Math.random()*0.07,
+    speed: 0.000022 + Math.random()*0.00004,
+    dark: 0.55 + Math.random()*0.35
+  }));
+
+  /* ---- rain: layered streaks with a faux motion-blur (two offset strokes per
+     drop instead of a blur filter, so it stays crisp, not hazy) ---- */
+  const RAIN_COUNT = 90;
+  const rain = Array.from({length:RAIN_COUNT}, ()=>({
+    x: Math.random()*innerWidth,
+    y: Math.random()*innerHeight,
+    len: 16 + Math.random()*22,
+    speed: 9 + Math.random()*9,
+    slant: -0.55 - Math.random()*0.25,
+    alpha: 0.06 + Math.random()*0.1
+  }));
+
+  /* ---- dripping blood streams from the top edge : tapered, glossy, with
+     a leading bulb (surface tension) that eventually detaches ---- */
+  const DRIP_COUNT = 12;
+  const drips = Array.from({length:DRIP_COUNT}, (_,i)=>({
+    x: (i+0.5)/DRIP_COUNT + (Math.random()*0.03-0.015),
+    len: Math.random()*40,
+    maxLen: 90 + Math.random()*190,
+    speed: 0.2 + Math.random()*0.45,
+    width: 2.4 + Math.random()*2.6,
+    wob: Math.random()*100
+  }));
+  let drops = [];
+
+  /* ---- lightning : true multi-flicker strike, tapering fractal branches ---- */
+  let bolts = [];
+  let flash = 0;
+  let cloudFlashUntil = 0;
+  let nextBoltAt = performance.now() + 1400 + Math.random()*2200;
+
+  function buildBranch(x0,y0,x1,y1,depth,out,baseWidth){
+    const midShift = (Math.random()-0.5) * (Math.abs(y1-y0)) * 0.5;
+    const mx = (x0+x1)/2 + midShift;
+    const my = (y0+y1)/2;
+    if(depth <= 0){
+      out.push({x0,y0,x1,y1,width:baseWidth});
+      return;
+    }
+    buildBranch(x0,y0,mx,my,depth-1,out,baseWidth);
+    buildBranch(mx,my,x1,y1,depth-1,out,baseWidth*0.94);
+    if(Math.random() < 0.30){
+      const bx = mx + (Math.random()<0.5?-1:1)*(40+Math.random()*90);
+      const by = my + Math.abs(y1-y0)*(0.3+Math.random()*0.4);
+      buildBranch(mx,my,bx,by,Math.max(0,depth-2),out,baseWidth*0.45);
+    }
+  }
+
+  function spawnStrike(){
+    const startX = w*0.1 + Math.random()*w*0.8;
+    const jitterX = startX + (Math.random()-0.5)*220;
+    const segs = [];
+    buildBranch(startX, -8, jitterX, h*(0.55+Math.random()*0.4), 5, segs, 2.6);
+
+    /* real strikes are a rapid burst of 2-4 flickers, not one smooth fade */
+    const flickers = 2 + Math.floor(Math.random()*3);
+    let t = 0;
+    for(let i=0;i<flickers;i++){
+      const delay = t;
+      const dur = 40 + Math.random()*70;
+      bolts.push({ segs, born: performance.now()+delay, life: dur, peak: i===0 ? 1 : 0.55+Math.random()*0.35 });
+      t += dur + 20 + Math.random()*60;
+    }
+    cloudFlashUntil = performance.now() + t + 200;
+
+    document.body.classList.remove('shake'); void document.body.offsetWidth;
+    document.body.classList.add('shake');
+    setTimeout(()=>document.body.classList.remove('shake'), 260);
+  }
+
+  function render(now){
+    ctx.clearRect(0,0,w,h);
+    const base = ctx.createLinearGradient(0,0,0,h);
+    base.addColorStop(0, 'rgba(9,1,2,1)');
+    base.addColorStop(0.55, 'rgba(5,0,1,1)');
+    base.addColorStop(1, 'rgba(2,0,1,1)');
+    ctx.fillStyle = base;
+    ctx.fillRect(0,0,w,h);
+
+    /* dried blood spatter — glossy core + directional teardrop flecks */
+    splatters.forEach(sp=>{
+      ctx.save();
+      ctx.translate(sp.x, sp.y);
+      sp.drops.forEach(d=>{
+        ctx.save();
+        ctx.translate(d.x, d.y);
+        ctx.rotate(d.angle);
+        ctx.scale(d.elong, 1);
+        const g = ctx.createRadialGradient(0,0,0,0,0,d.size);
+        g.addColorStop(0, `rgba(150,4,14,${d.alpha})`);
+        g.addColorStop(0.7, `rgba(90,0,8,${d.alpha*0.7})`);
+        g.addColorStop(1, 'rgba(60,0,5,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.ellipse(0,0,d.size,d.size*0.72,0,0,Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+      });
+      const coreG = ctx.createRadialGradient(0,0,0,0,0,sp.coreR);
+      coreG.addColorStop(0, 'rgba(180,10,20,0.55)');
+      coreG.addColorStop(0.55, 'rgba(110,0,10,0.4)');
+      coreG.addColorStop(1, 'rgba(70,0,6,0)');
+      ctx.fillStyle = coreG;
+      ctx.beginPath();
+      ctx.arc(0,0,sp.coreR,0,Math.PI*2);
+      ctx.fill();
+      /* small wet highlight, off-center, like light catching fresh blood */
+      ctx.fillStyle = 'rgba(255,90,100,0.18)';
+      ctx.beginPath();
+      ctx.ellipse(-sp.coreR*0.3,-sp.coreR*0.3, sp.coreR*0.32, sp.coreR*0.18, -0.6, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    });
+
+    /* storm clouds — brighten briefly right after a strike, like they're lit from within */
+    const litNow = now < cloudFlashUntil;
+    clouds.forEach(c=>{
+      c.x += c.speed*16.7;
+      if(c.x > 1.3) c.x = -0.3;
+      const cx = c.x*w, cy = c.y*h;
+      const rx = c.rx*w, ry = c.ry*h;
+      const boost = litNow ? 1.8 : 1;
+      const g = ctx.createRadialGradient(cx,cy,0,cx,cy,rx);
+      g.addColorStop(0, `rgba(${Math.min(255,Math.floor(34*c.dark*boost))},0,${Math.floor(5*c.dark)},0.85)`);
+      g.addColorStop(0.72, `rgba(${Math.floor(18*c.dark*boost)},0,2,0.5)`);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.save();
+      ctx.translate(cx,cy);
+      ctx.scale(1, ry/rx);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0,0,rx,0,Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    });
+
+    /* rain: crisp double-stroke streaks fake a motion-blur without any actual blur */
+    rain.forEach(d=>{
+      const tailX = d.x + d.slant*d.len;
+      const tailY = d.y - d.len;
+      ctx.strokeStyle = `rgba(255,70,85,${d.alpha})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(d.x,d.y); ctx.lineTo(tailX,tailY); ctx.stroke();
+      ctx.strokeStyle = `rgba(255,120,130,${d.alpha*0.5})`;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath(); ctx.moveTo(d.x+1,d.y); ctx.lineTo(tailX+1,tailY); ctx.stroke();
+      d.y += d.speed; d.x += d.slant*1.2;
+      if(d.y - d.len > h){ d.y = -d.len; d.x = Math.random()*w; }
+      if(d.x < -30) d.x = w+30;
+    });
+
+    /* dripping blood streams: tapered ribbon + leading bulb, glossy highlight */
+    drips.forEach(d=>{
+      d.len += d.speed;
+      const x = d.x*w + Math.sin(now*0.0007+d.wob)*2.4;
+      if(d.len > d.maxLen){
+        drops.push({ x, y:d.len, vy:1.1+Math.random()*0.6, r:d.width*0.9, squish:1 });
+        d.len = Math.random()*16;
+        d.maxLen = 90 + Math.random()*190;
+      }
+      const topW = d.width*0.55, botW = d.width*1.15;
+      ctx.beginPath();
+      ctx.moveTo(x-topW/2,0);
+      ctx.lineTo(x-botW/2,d.len);
+      ctx.lineTo(x+botW/2,d.len);
+      ctx.lineTo(x+topW/2,0);
+      ctx.closePath();
+      const grad = ctx.createLinearGradient(x,0,x,d.len);
+      grad.addColorStop(0,'rgba(55,0,5,0.88)');
+      grad.addColorStop(1,'rgba(180,0,16,0.92)');
+      ctx.fillStyle = grad;
+      ctx.fill();
+      /* glossy highlight streak, slightly off-center */
+      ctx.strokeStyle = 'rgba(255,120,130,0.35)';
+      ctx.lineWidth = Math.max(0.6, d.width*0.18);
+      ctx.beginPath();
+      ctx.moveTo(x-d.width*0.18,d.len*0.08);
+      ctx.lineTo(x-d.width*0.1,d.len*0.85);
+      ctx.stroke();
+      /* leading bulb where surface tension holds the drop */
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(200,4,18,0.95)';
+      ctx.arc(x,d.len,botW*0.62,0,Math.PI*2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(255,140,150,0.4)';
+      ctx.arc(x-botW*0.18,d.len-botW*0.2,botW*0.16,0,Math.PI*2);
+      ctx.fill();
+    });
+
+    /* falling, detached drops: stretch with velocity like real liquid in freefall */
+    drops = drops.filter(dr=>{
+      dr.y += dr.vy;
+      dr.vy += 0.06;
+      dr.squish = Math.min(2.6, 1 + dr.vy*0.09);
+      ctx.save();
+      ctx.translate(dr.x, dr.y);
+      ctx.scale(1/Math.sqrt(dr.squish), dr.squish);
+      const g = ctx.createRadialGradient(0,0,0,0,0,dr.r);
+      g.addColorStop(0,'rgba(210,10,20,0.9)');
+      g.addColorStop(1,'rgba(140,0,10,0.75)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0,0,dr.r,0,Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,150,160,0.4)';
+      ctx.beginPath();
+      ctx.arc(-dr.r*0.3,-dr.r*0.3,dr.r*0.28,0,Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+      return dr.y < h+30;
+    });
+
+    /* lightning: layered bright-white-hot core over a red glow, per active flicker */
+    bolts = bolts.filter(b => now - b.born < b.life && now >= b.born - 5);
+    let anyLit = false;
+    bolts.forEach(b=>{
+      if(now < b.born) return;
+      anyLit = true;
+      const t = (now-b.born)/b.life;
+      const a = (t < 0.35 ? t/0.35 : 1-((t-0.35)/0.65)) * b.peak;
+      ctx.save();
+      ctx.lineCap = 'round';
+      /* wide soft glow */
+      ctx.strokeStyle = `rgba(255,40,60,${0.5*a})`;
+      ctx.shadowColor = 'rgba(255,45,70,0.95)';
+      ctx.shadowBlur = 26;
+      ctx.lineWidth = 7;
+      b.segs.forEach(s=>{ ctx.lineWidth = 7*(s.width/2.6); ctx.beginPath(); ctx.moveTo(s.x0,s.y0); ctx.lineTo(s.x1,s.y1); ctx.stroke(); });
+      /* hot white-red core */
+      ctx.shadowBlur = 10;
+      b.segs.forEach(s=>{
+        ctx.strokeStyle = `rgba(255,225,225,${0.95*a})`;
+        ctx.lineWidth = Math.max(0.8, s.width*0.55);
+        ctx.beginPath(); ctx.moveTo(s.x0,s.y0); ctx.lineTo(s.x1,s.y1); ctx.stroke();
+      });
+      ctx.restore();
+    });
+
+    /* ambient flash wash decays independently so afterglow lingers past the flicker */
+    flash = anyLit ? Math.min(1, flash + 0.55) : flash*0.88;
+    if(flash > 0.003){
+      ctx.fillStyle = `rgba(255,55,65,${flash*0.16})`;
+      ctx.fillRect(0,0,w,h);
+    }
+
+    if(now > nextBoltAt){
+      spawnStrike();
+      nextBoltAt = now + 2600 + Math.random()*4400;
+    }
+  }
+
+  if(reduceMotion){
+    render(performance.now());
+  } else {
+    function loop(now){ render(now); requestAnimationFrame(loop); }
+    requestAnimationFrame(loop);
+  }
+})();
+</script>
+
+</body>
+</html>
