@@ -59,6 +59,12 @@ body{
 }
 .lattice canvas{ width:100%; height:100%; display:block; }
 
+/* cinematic edge darkening so the strikes read as brighter by contrast */
+.storm-vignette{
+  position:fixed; inset:0; z-index:1; pointer-events:none;
+  background:radial-gradient(ellipse at 50% 42%, transparent 32%, rgba(0,0,0,.32) 72%, rgba(0,0,0,.62) 100%);
+}
+
 /* floating embers layer */
 .embers{ position:fixed; inset:0; z-index:1; pointer-events:none; overflow:hidden; }
 .ember{
@@ -75,6 +81,17 @@ body{
   8%{ opacity:.85; }
   92%{ opacity:.5; }
   100%{ transform:translateY(-112vh) translateX(var(--drift,20px)); opacity:0; }
+}
+
+/* thunderclap: a real, physical-feeling jolt tied to each strike */
+body.shake{ animation:shakeKey 240ms cubic-bezier(.36,.07,.19,.97) both; }
+@keyframes shakeKey{
+  12%{ transform:translate3d(-2px,1px,0); }
+  24%{ transform:translate3d(3px,-1px,0); }
+  36%{ transform:translate3d(-3px,0,0); }
+  48%{ transform:translate3d(2px,1px,0); }
+  60%{ transform:translate3d(-1px,-1px,0); }
+  100%{ transform:translate3d(0,0,0); }
 }
 
 /* =========================================================
@@ -296,8 +313,43 @@ body{
   box-shadow:0 0 16px rgba(214,0,31,.14), inset 0 0 8px rgba(0,0,0,.4);
   color:var(--gold-bright);
   position:relative; z-index:2;
+  animation:iconBreathe 3.6s ease-in-out infinite;
+  animation-delay:var(--breathe-delay, 0s);
+  transform-origin:center center;
 }
-.relic-icon svg{ width:55%; height:55%; }
+@keyframes iconBreathe{
+  0%,100%{ transform:scale(1) rotate(0deg); }
+  50%{ transform:scale(1.05) rotate(-1.5deg); }
+}
+.relic-card:hover .relic-icon,
+.relic-card:focus-visible .relic-icon{
+  animation-play-state:paused;
+  transform:scale(1.16) rotate(-8deg);
+  background:rgba(214,0,31,.2);
+  border-color:rgba(240,217,160,.6);
+  box-shadow:0 0 26px rgba(255,45,70,.55), inset 0 0 10px rgba(0,0,0,.4);
+  transition:transform .5s cubic-bezier(.34,1.56,.64,1), background .3s ease, border-color .3s ease, box-shadow .3s ease;
+}
+.relic-card:active .relic-icon{
+  transform:scale(.85) rotate(6deg) !important;
+  transition:transform .12s ease !important;
+}
+/* stagger the idle breathing so a whole row doesn't pulse in unison */
+.relic-card:nth-child(1) .relic-icon{ --breathe-delay:0s; }
+.relic-card:nth-child(2) .relic-icon{ --breathe-delay:.5s; }
+.relic-card:nth-child(3) .relic-icon{ --breathe-delay:1s; }
+.relic-card:nth-child(4) .relic-icon{ --breathe-delay:1.5s; }
+.relic-card:nth-child(5) .relic-icon{ --breathe-delay:2s; }
+.relic-card:nth-child(6) .relic-icon{ --breathe-delay:2.5s; }
+
+.relic-icon svg{ width:55%; height:55%; overflow:visible; }
+.relic-icon svg *{ stroke-dasharray:1; stroke-dashoffset:0; }
+.relic-icon svg.redraw *{ animation:iconDraw .6s ease; }
+@keyframes iconDraw{
+  0%{ stroke-dashoffset:1; opacity:.25; }
+  55%{ opacity:1; }
+  100%{ stroke-dashoffset:0; opacity:1; }
+}
 
 .relic-label{
   font-family:'Cinzel', serif; font-weight:600;
@@ -423,6 +475,7 @@ footer{
 <body>
 
 <div class="lattice"><canvas id="latticeCanvas"></canvas></div>
+<div class="storm-vignette"></div>
 <div class="embers" id="embers"></div>
 
 <div class="page">
@@ -670,6 +723,31 @@ setInterval(tick, 1000);
 })();
 
 /* =========================================================
+   ICON PLAY — normalize stroke length so every icon can "draw
+   itself" in on hover, and restart that draw on every entry
+========================================================= */
+(function(){
+  document.querySelectorAll('.relic-icon svg').forEach(svg=>{
+    svg.querySelectorAll('path,line,circle,rect,polyline,polygon').forEach(el=>{
+      el.setAttribute('pathLength','1');
+    });
+  });
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduceMotion) return;
+
+  document.querySelectorAll('.relic-card').forEach(card=>{
+    const svg = card.querySelector('.relic-icon svg');
+    if(!svg) return;
+    card.addEventListener('pointerenter', ()=>{
+      svg.classList.remove('redraw');
+      void svg.getBoundingClientRect(); /* force reflow so the animation restarts */
+      svg.classList.add('redraw');
+    });
+  });
+})();
+
+/* =========================================================
    SCROLL REVEAL
 ========================================================= */
 (function(){
@@ -717,7 +795,9 @@ setInterval(tick, 1000);
 })();
 
 /* =========================================================
-   RED STORM DISASTER BACKDROP — clouds, lightning, blood, splatter
+   RED STORM DISASTER BACKDROP v3 — full-page blood coverage
+   (baked, not redrawn per frame), five distinct lightning
+   patterns chosen at random, and a much lighter draw loop
 ========================================================= */
 (function(){
   const canvas = document.getElementById('latticeCanvas');
@@ -725,76 +805,307 @@ setInterval(tick, 1000);
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let w, h, dpr;
 
+  /* ---- baked blood layer: painted ONCE per resize instead of every frame.
+     This is both the fix for "doesn't cover the whole page" (impacts are
+     spread across the full height now, not just the top) and the single
+     biggest performance win — one drawImage() replaces ~80 gradient
+     allocations every frame. ---- */
+  const bloodBase = document.createElement('canvas');
+  const bctx = bloodBase.getContext('2d');
+
+  function paintDirectionalSplatter(g, ix, iy){
+    const dir = Math.random()*Math.PI*2;
+    const n = 14 + Math.floor(Math.random()*10);
+    g.save();
+    g.translate(ix, iy);
+    for(let k=0;k<n;k++){
+      const a = dir + (Math.random()-0.5)*2.4;
+      const rnd = Math.random();
+      const dist = 8 + (rnd*rnd)*90;
+      const size = 1.2 + (1-rnd)*(1-rnd)*9;
+      const elong = 1 + (dist/60);
+      const alpha = 0.35 + Math.random()*0.35;
+      g.save();
+      g.translate(Math.cos(a)*dist, Math.sin(a)*dist);
+      g.rotate(a);
+      g.scale(elong, 1);
+      const grad = g.createRadialGradient(0,0,0,0,0,size);
+      grad.addColorStop(0, `rgba(150,4,14,${alpha})`);
+      grad.addColorStop(0.7, `rgba(90,0,8,${alpha*0.7})`);
+      grad.addColorStop(1, 'rgba(60,0,5,0)');
+      g.fillStyle = grad;
+      g.beginPath();
+      g.ellipse(0,0,size,size*0.72,0,0,Math.PI*2);
+      g.fill();
+      g.restore();
+    }
+    const coreR = 5 + Math.random()*6;
+    const coreG = g.createRadialGradient(0,0,0,0,0,coreR);
+    coreG.addColorStop(0, 'rgba(180,10,20,0.55)');
+    coreG.addColorStop(0.55, 'rgba(110,0,10,0.4)');
+    coreG.addColorStop(1, 'rgba(70,0,6,0)');
+    g.fillStyle = coreG;
+    g.beginPath(); g.arc(0,0,coreR,0,Math.PI*2); g.fill();
+    g.fillStyle = 'rgba(255,90,100,0.18)';
+    g.beginPath();
+    g.ellipse(-coreR*0.3,-coreR*0.3, coreR*0.32, coreR*0.18, -0.6, 0, Math.PI*2);
+    g.fill();
+    g.restore();
+  }
+
+  function buildBloodBase(){
+    bloodBase.width = w; bloodBase.height = h;
+    bctx.clearRect(0,0,w,h);
+
+    /* broad, soft wash tying the page together top to bottom */
+    const washes = 12 + Math.floor(Math.random()*5);
+    for(let i=0;i<washes;i++){
+      const x = Math.random()*w, y = Math.random()*h;
+      const r = 70 + Math.random()*200;
+      const g = bctx.createRadialGradient(x,y,0,x,y,r);
+      g.addColorStop(0, 'rgba(90,0,8,0.09)');
+      g.addColorStop(1, 'rgba(70,0,6,0)');
+      bctx.fillStyle = g;
+      bctx.beginPath(); bctx.arc(x,y,r,0,Math.PI*2); bctx.fill();
+    }
+
+    /* directional impact splatter, spread across the ENTIRE height —
+       this is what "cover the whole page" needed: previously these
+       only ever landed in the top half */
+    const IMPACTS = 11 + Math.floor(Math.random()*5);
+    for(let i=0;i<IMPACTS;i++){
+      const ix = w*0.04 + Math.random()*w*0.92;
+      const iy = h*0.02 + Math.random()*h*0.96;
+      paintDirectionalSplatter(bctx, ix, iy);
+    }
+  }
+
   function resize(){
     dpr = Math.min(window.devicePixelRatio || 1, 2);
     w = window.innerWidth; h = window.innerHeight;
     canvas.width = w*dpr; canvas.height = h*dpr;
     canvas.style.width = w+'px'; canvas.style.height = h+'px';
     ctx.setTransform(dpr,0,0,dpr,0,0);
-    splatters = Array.from({length:16}, ()=>({
-      x: Math.random()*w, y: Math.random()*h,
-      s: 6 + Math.random()*20, a: 0.06 + Math.random()*0.1
-    }));
+    buildBloodBase();
+    resizeStain();
   }
-  let splatters = [];
+
+  /* ---- persistent stain layer: continues to accumulate on top of the
+     baked base as drips travel and drops land, so the page keeps
+     visibly "bleeding" over time rather than looking static ---- */
+  const stain = document.createElement('canvas');
+  const stainCtx = stain.getContext('2d');
+  function resizeStain(){ stain.width = w; stain.height = h; }
+  let lastStainClear = performance.now();
+
   resize();
   window.addEventListener('resize', resize);
 
-  /* ---- roiling storm clouds : hard-edged, no soft haze ---- */
+  /* ---- storm clouds : hard-edged, brighten briefly when lightning is near ---- */
   const clouds = Array.from({length:7}, ()=>({
     x: Math.random()*1.4 - 0.2,
-    y: Math.random()*0.32,
+    y: Math.random()*0.30,
     rx: 0.26 + Math.random()*0.22,
     ry: 0.09 + Math.random()*0.07,
     speed: 0.000022 + Math.random()*0.00004,
     dark: 0.55 + Math.random()*0.35
   }));
 
-  /* ---- dripping blood streaks from the top ---- */
-  const DRIP_COUNT = 13;
-  const drips = Array.from({length:DRIP_COUNT}, (_,i)=>({
-    x: (i+0.5)/DRIP_COUNT + (Math.random()*0.02-0.01),
-    len: Math.random()*40,
-    maxLen: 70 + Math.random()*160,
-    speed: 0.22 + Math.random()*0.5,
-    width: 2 + Math.random()*2.2,
-    seed: Math.random()*100
+  /* ---- rain: batched into 3 alpha tiers so the whole field draws in
+     3 stroke() calls instead of one call per drop (was ~180/frame) ---- */
+  const RAIN_COUNT = 80;
+  const RAIN_TIERS = [0.08, 0.13, 0.19];
+  const rain = Array.from({length:RAIN_COUNT}, ()=>({
+    x: Math.random()*innerWidth,
+    y: Math.random()*innerHeight,
+    len: 16 + Math.random()*22,
+    speed: 9 + Math.random()*9,
+    slant: -0.55 - Math.random()*0.25,
+    tier: Math.floor(Math.random()*3)
   }));
+
+  function drawRain(){
+    const paths = [new Path2D(), new Path2D(), new Path2D()];
+    rain.forEach(d=>{
+      const tailX = d.x + d.slant*d.len;
+      const tailY = d.y - d.len;
+      paths[d.tier].moveTo(d.x, d.y);
+      paths[d.tier].lineTo(tailX, tailY);
+      d.y += d.speed; d.x += d.slant*1.2;
+      if(d.y - d.len > h){ d.y = -d.len; d.x = Math.random()*w; }
+      if(d.x < -30) d.x = w+30;
+    });
+    ctx.lineWidth = 1;
+    for(let i=0;i<3;i++){
+      ctx.strokeStyle = `rgba(255,90,100,${RAIN_TIERS[i]})`;
+      ctx.stroke(paths[i]);
+    }
+  }
+
+  /* ---- dripping blood streams : one set from the very top edge, plus a
+     second set that starts mid-page at random heights, so streaks are
+     running the whole way down the screen, not just a strip up top ---- */
+  function makeDrip(startY){
+    return {
+      x: Math.random(),
+      startY,
+      len: Math.random()*30,
+      maxLen: 80 + Math.random()*220,
+      speed: 0.2 + Math.random()*0.45,
+      width: 2.2 + Math.random()*2.8,
+      wob: Math.random()*100
+    };
+  }
+  const EDGE_DRIP_COUNT = 12;
+  const WALL_DRIP_COUNT = 11;
+  let allDrips = [];
+  function seedDrips(){
+    allDrips = [];
+    for(let i=0;i<EDGE_DRIP_COUNT;i++) allDrips.push(makeDrip(0));
+    for(let i=0;i<WALL_DRIP_COUNT;i++) allDrips.push(makeDrip(Math.random()*0.82));
+  }
+  seedDrips();
   let drops = [];
 
-  /* ---- forked red lightning + screen flash ---- */
-  let bolts = [];
-  let flash = 0;
-  let nextBoltAt = performance.now() + 1200 + Math.random()*2000;
-
-  function spawnBolt(){
-    const startX = w*0.12 + Math.random()*w*0.76;
-    const segs = [];
-    let cx = startX, cy = 0;
-    const steps = 8 + Math.floor(Math.random()*6);
-    const stepH = h/steps;
-    for(let i=0;i<steps;i++){
-      const nx = cx + (Math.random()-0.5)*70;
-      const ny = cy + stepH;
-      segs.push([cx,cy,nx,ny]);
-      if(Math.random() < 0.32 && i>1 && i<steps-1){
-        let bx = nx, by = ny;
-        const blen = 2 + Math.floor(Math.random()*3);
-        for(let j=0;j<blen;j++){
-          const bnx = bx + (Math.random()<0.5?-1:1)*(30+Math.random()*70);
-          const bny = by + stepH*0.7;
-          segs.push([bx,by,bnx,bny]);
-          bx = bnx; by = bny;
-        }
-      }
-      cx = nx; cy = ny;
+  function drawDrip(d, now){
+    const startY = typeof d.startY === 'number' && d.startY <= 1 ? d.startY*h : d.startY;
+    d.len += d.speed;
+    const x = d.x*w + Math.sin(now*0.0007+d.wob)*2.4;
+    const topY = startY, botY = startY + d.len;
+    if(d.len > d.maxLen){
+      drops.push({ x, y:botY, vy:1.1+Math.random()*0.6, r:d.width*0.9, squish:1 });
+      d.len = Math.random()*16;
+      d.maxLen = 80 + Math.random()*220;
     }
-    bolts.push({ segs, born: performance.now(), life: 240 + Math.random()*180 });
-    flash = Math.min(1, flash + 0.9);
+    stainCtx.fillStyle = 'rgba(120,0,10,0.018)';
+    stainCtx.beginPath();
+    stainCtx.ellipse(x, topY + d.len*0.6, d.width*0.5, d.len*0.42, 0, 0, Math.PI*2);
+    stainCtx.fill();
+    const topW = d.width*0.55, botW = d.width*1.15;
+    ctx.beginPath();
+    ctx.moveTo(x-topW/2, topY);
+    ctx.lineTo(x-botW/2, botY);
+    ctx.lineTo(x+botW/2, botY);
+    ctx.lineTo(x+topW/2, topY);
+    ctx.closePath();
+    const grad = ctx.createLinearGradient(x,topY,x,botY);
+    grad.addColorStop(0,'rgba(55,0,5,0.88)');
+    grad.addColorStop(1,'rgba(180,0,16,0.92)');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,120,130,0.35)';
+    ctx.lineWidth = Math.max(0.6, d.width*0.18);
+    ctx.beginPath();
+    ctx.moveTo(x-d.width*0.18, topY+d.len*0.08);
+    ctx.lineTo(x-d.width*0.1, topY+d.len*0.85);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(200,4,18,0.95)';
+    ctx.arc(x,botY,botW*0.62,0,Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(255,140,150,0.4)';
+    ctx.arc(x-botW*0.18,botY-botW*0.2,botW*0.16,0,Math.PI*2);
+    ctx.fill();
+  }
+
+  /* ---- lightning : five distinct strike patterns, picked at random so
+     it never looks like the same bolt firing on a loop ---- */
+  let bolts = [];
+  let sheetFlashes = [];
+  let flash = 0;
+  let cloudFlashUntil = 0;
+  let nextBoltAt = performance.now() + 1400 + Math.random()*2200;
+  let farFlash = 0;
+  let nextFarBoltAt = performance.now() + 900 + Math.random()*1600;
+
+  function buildBranch(x0,y0,x1,y1,depth,out,baseWidth){
+    const midShift = (Math.random()-0.5) * (Math.abs(y1-y0)+Math.abs(x1-x0)) * 0.35;
+    const mx = (x0+x1)/2 + midShift*(Math.random()<0.5?1:-1)*0 + (Math.random()-0.5)*Math.abs(y1-y0)*0.4;
+    const my = (y0+y1)/2;
+    if(depth <= 0){
+      out.push({x0,y0,x1,y1,width:baseWidth});
+      return;
+    }
+    buildBranch(x0,y0,mx,my,depth-1,out,baseWidth);
+    buildBranch(mx,my,x1,y1,depth-1,out,baseWidth*0.94);
+    if(Math.random() < 0.30){
+      const bx = mx + (Math.random()<0.5?-1:1)*(40+Math.random()*90);
+      const by = my + Math.abs(y1-y0)*(0.3+Math.random()*0.4) + Math.abs(x1-x0)*0.1;
+      buildBranch(mx,my,bx,by,Math.max(0,depth-2),out,baseWidth*0.45);
+    }
+  }
+
+  function pickStrikeType(){
+    const r = Math.random();
+    if(r < 0.36) return 'classic';
+    if(r < 0.56) return 'web';
+    if(r < 0.72) return 'double';
+    if(r < 0.88) return 'horizontal';
+    return 'sheet';
+  }
+
+  function spawnStrike(){
+    const type = pickStrikeType();
+    const segsList = [];
+
+    if(type === 'classic'){
+      const startX = w*0.1 + Math.random()*w*0.8;
+      const jitterX = startX + (Math.random()-0.5)*220;
+      const segs = [];
+      buildBranch(startX, -8, jitterX, h*(0.55+Math.random()*0.4), 5, segs, 2.6);
+      segsList.push(segs);
+    } else if(type === 'web'){
+      const startX = w*0.15 + Math.random()*w*0.7;
+      const branches = 3 + Math.floor(Math.random()*2);
+      for(let i=0;i<branches;i++){
+        const endX = startX + (Math.random()-0.5)*w*0.6;
+        const endY = h*(0.32+Math.random()*0.5);
+        const segs = [];
+        buildBranch(startX, -8, endX, endY, 4, segs, 2.1);
+        segsList.push(segs);
+      }
+    } else if(type === 'double'){
+      for(let i=0;i<2;i++){
+        const startX = w*(0.08+i*0.5) + Math.random()*w*0.32;
+        const jitterX = startX + (Math.random()-0.5)*200;
+        const segs = [];
+        buildBranch(startX, -8, jitterX, h*(0.5+Math.random()*0.4), 5, segs, 2.4);
+        segsList.push(segs);
+      }
+    } else if(type === 'horizontal'){
+      const y0 = h*(0.06+Math.random()*0.14);
+      const fromLeft = Math.random() < 0.5;
+      const x0 = fromLeft ? -20 : w+20;
+      const x1 = fromLeft ? w*(0.55+Math.random()*0.38) : w*(0.06+Math.random()*0.38);
+      const y1 = y0 + (Math.random()-0.5)*h*0.08;
+      const segs = [];
+      buildBranch(x0,y0,x1,y1,4,segs,2.0);
+      segsList.push(segs);
+    }
+    /* 'sheet' intentionally has no bolt geometry — pure diffuse light */
+
+    const flickers = 2 + Math.floor(Math.random()*3);
+    let t = 0;
+    for(let i=0;i<flickers;i++){
+      const delay = t;
+      const dur = 40 + Math.random()*70;
+      segsList.forEach(segs=>{
+        bolts.push({ segs, born: performance.now()+delay, life: dur, peak: i===0 ? 1 : 0.55+Math.random()*0.35 });
+      });
+      if(type === 'sheet'){
+        sheetFlashes.push({ born: performance.now()+delay, life: dur*2.6, peak: i===0 ? 0.85 : 0.4+Math.random()*0.3 });
+      }
+      t += dur + 20 + Math.random()*60;
+    }
+    cloudFlashUntil = performance.now() + t + 200;
+
+    document.body.classList.remove('shake'); void document.body.offsetWidth;
+    document.body.classList.add('shake');
+    setTimeout(()=>document.body.classList.remove('shake'), 260);
   }
 
   function render(now){
-    /* hard clear -> crisp storm, not a haze */
     ctx.clearRect(0,0,w,h);
     const base = ctx.createLinearGradient(0,0,0,h);
     base.addColorStop(0, 'rgba(9,1,2,1)');
@@ -803,27 +1114,45 @@ setInterval(tick, 1000);
     ctx.fillStyle = base;
     ctx.fillRect(0,0,w,h);
 
-    /* faint dried-blood splatter texture, fixed positions */
-    splatters.forEach(sp=>{
-      ctx.fillStyle = `rgba(90,0,10,${sp.a})`;
-      for(let k=0;k<5;k++){
-        const ox = (Math.sin(sp.x*k+k)*sp.s*0.5);
-        const oy = (Math.cos(sp.y*k+k)*sp.s*0.5);
-        ctx.beginPath();
-        ctx.ellipse(sp.x+ox, sp.y+oy, sp.s*(0.3+0.15*k), sp.s*(0.22+0.1*k), k, 0, Math.PI*2);
-        ctx.fill();
-      }
-    });
+    /* distant silent horizon flashes between the main strikes */
+    if(now > nextFarBoltAt){
+      farFlash = 1;
+      nextFarBoltAt = now + 900 + Math.random()*2600;
+    }
+    if(farFlash > 0.002){
+      const fg = ctx.createRadialGradient(w*0.5, h*0.28, 0, w*0.5, h*0.28, w*0.75);
+      fg.addColorStop(0, `rgba(255,60,75,${farFlash*0.1})`);
+      fg.addColorStop(1, 'rgba(255,60,75,0)');
+      ctx.fillStyle = fg;
+      ctx.fillRect(0,0,w,h);
+      farFlash *= 0.82;
+    } else { farFlash = 0; }
 
-    /* storm clouds, hard-edge gradient discs */
+    /* baked full-page blood layer — one draw call, covers edge to edge */
+    ctx.drawImage(bloodBase, 0, 0);
+
+    /* accumulated stain from drips/drops, gently capped so it never saturates */
+    if(now - lastStainClear > 30000){
+      stainCtx.save();
+      stainCtx.globalCompositeOperation = 'destination-out';
+      stainCtx.fillStyle = 'rgba(0,0,0,0.5)';
+      stainCtx.fillRect(0,0,w,h);
+      stainCtx.restore();
+      lastStainClear = now;
+    }
+    ctx.drawImage(stain, 0, 0);
+
+    /* storm clouds — brighten briefly right after a strike */
+    const litNow = now < cloudFlashUntil;
     clouds.forEach(c=>{
       c.x += c.speed*16.7;
       if(c.x > 1.3) c.x = -0.3;
       const cx = c.x*w, cy = c.y*h;
       const rx = c.rx*w, ry = c.ry*h;
+      const boost = litNow ? 1.8 : 1;
       const g = ctx.createRadialGradient(cx,cy,0,cx,cy,rx);
-      g.addColorStop(0, `rgba(${Math.floor(34*c.dark)},0,${Math.floor(5*c.dark)},0.85)`);
-      g.addColorStop(0.72, `rgba(${Math.floor(18*c.dark)},0,2,0.5)`);
+      g.addColorStop(0, `rgba(${Math.min(255,Math.floor(34*c.dark*boost))},0,${Math.floor(5*c.dark)},0.85)`);
+      g.addColorStop(0.72, `rgba(${Math.floor(18*c.dark*boost)},0,2,0.5)`);
       g.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.save();
       ctx.translate(cx,cy);
@@ -835,71 +1164,88 @@ setInterval(tick, 1000);
       ctx.restore();
     });
 
-    /* dripping blood */
-    drips.forEach(d=>{
-      d.len += d.speed;
-      if(d.len > d.maxLen){
-        drops.push({ x: d.x*w + Math.sin(d.seed)*4, y: d.len, vy: 1.2+Math.random()*0.6, r: d.width*0.85 });
-        d.len = Math.random()*18;
-        d.maxLen = 70 + Math.random()*160;
-      }
-      const x = d.x*w;
-      const grad = ctx.createLinearGradient(x,0,x,d.len);
-      grad.addColorStop(0, 'rgba(60,0,5,0.85)');
-      grad.addColorStop(1, 'rgba(214,0,31,0.92)');
-      ctx.strokeStyle = grad;
-      ctx.lineWidth = d.width;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(x,0);
-      ctx.lineTo(x + Math.sin(now*0.0006+d.seed)*2, d.len);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.fillStyle = 'rgba(255,45,70,0.55)';
-      ctx.arc(x, d.len, d.width*0.7, 0, Math.PI*2);
-      ctx.fill();
-    });
+    drawRain();
 
-    /* falling detached drops */
+    /* full-page blood drip streams: top-edge + mid-page starts */
+    allDrips.forEach(d => drawDrip(d, now));
+
+    /* falling, detached drops: stretch with velocity like real liquid in freefall */
     drops = drops.filter(dr=>{
       dr.y += dr.vy;
-      dr.vy += 0.05;
+      dr.vy += 0.06;
+      dr.squish = Math.min(2.6, 1 + dr.vy*0.09);
+      ctx.save();
+      ctx.translate(dr.x, dr.y);
+      ctx.scale(1/Math.sqrt(dr.squish), dr.squish);
+      const g = ctx.createRadialGradient(0,0,0,0,0,dr.r);
+      g.addColorStop(0,'rgba(210,10,20,0.9)');
+      g.addColorStop(1,'rgba(140,0,10,0.75)');
+      ctx.fillStyle = g;
       ctx.beginPath();
-      ctx.fillStyle = 'rgba(214,0,31,0.82)';
-      ctx.arc(dr.x, dr.y, dr.r, 0, Math.PI*2);
+      ctx.arc(0,0,dr.r,0,Math.PI*2);
       ctx.fill();
-      return dr.y < h+20;
+      ctx.fillStyle = 'rgba(255,150,160,0.4)';
+      ctx.beginPath();
+      ctx.arc(-dr.r*0.3,-dr.r*0.3,dr.r*0.28,0,Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+      if(dr.y >= h+30 && !dr.splashed){
+        dr.splashed = true;
+        stainCtx.fillStyle = 'rgba(120,0,10,0.14)';
+        stainCtx.beginPath();
+        stainCtx.ellipse(dr.x, h-2, dr.r*2.2, dr.r*0.8, 0, 0, Math.PI*2);
+        stainCtx.fill();
+      }
+      return dr.y < h+30;
     });
 
-    /* forked lightning */
-    bolts = bolts.filter(b => now - b.born < b.life);
+    /* lightning: layered bright-white-hot core over a red glow */
+    bolts = bolts.filter(b => now - b.born < b.life && now >= b.born - 5);
+    let anyLit = false;
     bolts.forEach(b=>{
+      if(now < b.born) return;
+      anyLit = true;
       const t = (now-b.born)/b.life;
-      const a = t < 0.2 ? t/0.2 : 1-((t-0.2)/0.8);
+      const a = (t < 0.35 ? t/0.35 : 1-((t-0.35)/0.65)) * b.peak;
       ctx.save();
-      ctx.strokeStyle = `rgba(255,235,235,${0.9*a})`;
-      ctx.shadowColor = 'rgba(255,45,70,0.95)';
-      ctx.shadowBlur = 18;
-      ctx.lineWidth = 2.2;
       ctx.lineCap = 'round';
-      b.segs.forEach(s=>{ ctx.beginPath(); ctx.moveTo(s[0],s[1]); ctx.lineTo(s[2],s[3]); ctx.stroke(); });
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = `rgba(255,45,70,${0.45*a})`;
-      ctx.lineWidth = 5;
-      b.segs.forEach(s=>{ ctx.beginPath(); ctx.moveTo(s[0],s[1]); ctx.lineTo(s[2],s[3]); ctx.stroke(); });
+      ctx.strokeStyle = `rgba(255,40,60,${0.5*a})`;
+      ctx.shadowColor = 'rgba(255,45,70,0.95)';
+      ctx.shadowBlur = 22;
+      b.segs.forEach(s=>{ ctx.lineWidth = 7*(s.width/2.6); ctx.beginPath(); ctx.moveTo(s.x0,s.y0); ctx.lineTo(s.x1,s.y1); ctx.stroke(); });
+      ctx.shadowBlur = 9;
+      b.segs.forEach(s=>{
+        ctx.strokeStyle = `rgba(255,225,225,${0.95*a})`;
+        ctx.lineWidth = Math.max(0.8, s.width*0.55);
+        ctx.beginPath(); ctx.moveTo(s.x0,s.y0); ctx.lineTo(s.x1,s.y1); ctx.stroke();
+      });
       ctx.restore();
     });
 
-    /* flash decay wash from the strike */
-    if(flash > 0.001){
-      ctx.fillStyle = `rgba(255,60,70,${flash*0.22})`;
+    /* sheet-lightning flashes: pure diffuse light, no visible bolt at all */
+    sheetFlashes = sheetFlashes.filter(s => now - s.born < s.life && now >= s.born - 5);
+    let anySheet = false;
+    sheetFlashes.forEach(s=>{
+      if(now < s.born) return;
+      anySheet = true;
+      const t = (now-s.born)/s.life;
+      const a = (t < 0.3 ? t/0.3 : 1-((t-0.3)/0.7)) * s.peak;
+      const g = ctx.createRadialGradient(w*0.5,h*0.32,0,w*0.5,h*0.32,w*0.9);
+      g.addColorStop(0, `rgba(255,80,95,${0.5*a})`);
+      g.addColorStop(1, 'rgba(255,80,95,0)');
+      ctx.fillStyle = g;
       ctx.fillRect(0,0,w,h);
-      flash *= 0.86;
-    } else { flash = 0; }
+    });
+
+    flash = (anyLit||anySheet) ? Math.min(1, flash + 0.5) : flash*0.88;
+    if(flash > 0.003){
+      ctx.fillStyle = `rgba(255,55,65,${flash*0.15})`;
+      ctx.fillRect(0,0,w,h);
+    }
 
     if(now > nextBoltAt){
-      spawnBolt();
-      nextBoltAt = now + 2000 + Math.random()*4000;
+      spawnStrike();
+      nextBoltAt = now + 2600 + Math.random()*4400;
     }
   }
 
