@@ -1,0 +1,1664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>MARIANAS WEB — MW-Ø</title>
+<meta name="description" content="An interactive fictional archive inspired by internet folklore.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Hind+Siliguri:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   TOKENS
+   ============================================================ */
+:root{
+  --void:#030608;
+  --abyss:#070d16;
+  --panel:#0a1626;
+  --panel-2:#0c1c30;
+  --line:#173049;
+  --line-soft:#0f2136;
+  --cyan:#4dd8e6;
+  --cyan-dim:#2a7d8c;
+  --white:#c9d6db;
+  --white-dim:#7d8f96;
+  --amber:#b8934a;
+  --red:#c93a3a;
+  --magenta:#ff2b6d;
+  --font-display:'Orbitron', sans-serif;
+  --font-mono:'Share Tech Mono', monospace;
+  --font-body:'IBM Plex Mono', monospace;
+  --font-bn:'Hind Siliguri', sans-serif;
+  --ease:cubic-bezier(.16,.8,.24,1);
+}
+
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{
+  height:100%;
+  background:var(--void);
+  color:var(--white);
+  font-family:var(--font-body);
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+body{ position:relative; width:100vw; height:100vh; height:100dvh; }
+::selection{ background:var(--cyan-dim); color:var(--void); }
+
+body.reduced-motion *{
+  animation-duration:0.001s !important;
+  transition-duration:0.001s !important;
+  scroll-behavior:auto !important;
+}
+
+body.high-contrast{ --white:#f2f7f8; --white-dim:#c6d2d6; --line:#2c5678; }
+
+a{ color:var(--cyan); }
+button{ font-family:inherit; cursor:pointer; background:none; border:none; color:inherit; }
+
+:focus-visible{
+  outline:1px solid var(--cyan);
+  outline-offset:3px;
+}
+
+/* scrollbars */
+::-webkit-scrollbar{ width:6px; height:6px; }
+::-webkit-scrollbar-track{ background:transparent; }
+::-webkit-scrollbar-thumb{ background:var(--line); }
+
+/* ============================================================
+   AMBIENT BACKGROUND (shared canvas, particles + gradient)
+   ============================================================ */
+#bg-canvas{
+  position:fixed; inset:0; width:100%; height:100%; z-index:0;
+  background:radial-gradient(ellipse at 50% -10%, #0c2138 0%, var(--abyss) 45%, var(--void) 100%);
+  transition:filter 1.4s var(--ease);
+}
+#bg-vignette{
+  position:fixed; inset:0; z-index:1; pointer-events:none;
+  background:radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(0,0,0,.55) 100%);
+}
+#bg-scanlines{
+  position:fixed; inset:0; z-index:2; pointer-events:none; opacity:.05;
+  background:repeating-linear-gradient(0deg, #fff 0px, transparent 1px, transparent 3px);
+  mix-blend-mode:overlay;
+}
+#grain{
+  position:fixed; inset:0; z-index:2; pointer-events:none; opacity:.03;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ============================================================
+   BOOT SEQUENCE
+   ============================================================ */
+#boot{
+  position:fixed; inset:0; z-index:100; background:#000;
+  display:flex; align-items:center; justify-content:center;
+  transition:opacity 1s var(--ease);
+}
+#boot.hidden{ opacity:0; pointer-events:none; }
+#boot-console{
+  width:min(560px, 88vw);
+  font-family:var(--font-mono);
+  font-size:15px;
+  letter-spacing:.04em;
+  color:var(--cyan);
+  line-height:1.9;
+}
+#boot-console .line{ opacity:0; transform:translateY(2px); }
+#boot-console .line.show{ animation:bootline .5s var(--ease) forwards; }
+@keyframes bootline{ to{ opacity:1; transform:none; } }
+#boot-console .dim{ color:var(--white-dim); }
+#boot-console .warn{ color:var(--amber); }
+#boot-console .bar{ letter-spacing:.02em; }
+#boot-cursor{
+  display:inline-block; width:8px; height:16px; background:var(--cyan);
+  animation:blink 1s steps(1) infinite; vertical-align:-2px;
+}
+@keyframes blink{ 50%{ opacity:0; } }
+#boot-prompt{
+  margin-top:28px; display:flex; gap:14px; opacity:0;
+}
+#boot-prompt.show{ animation:bootline .6s var(--ease) forwards; }
+.boot-btn{
+  border:1px solid var(--line);
+  padding:10px 22px;
+  font-family:var(--font-mono);
+  letter-spacing:.12em;
+  font-size:13px;
+  color:var(--white-dim);
+  background:rgba(255,255,255,.02);
+  transition:border-color .3s, color .3s, background .3s;
+}
+.boot-btn:hover, .boot-btn:focus-visible{ border-color:var(--cyan); color:var(--cyan); background:rgba(77,216,230,.06); }
+.boot-btn.primary{ border-color:var(--cyan-dim); color:var(--cyan); }
+.boot-btn.primary:hover{ background:rgba(77,216,230,.1); }
+
+/* glitch flash for disconnect */
+.flash{
+  position:fixed; inset:0; z-index:200; background:#fff; opacity:0; pointer-events:none;
+}
+.flash.go{ animation:flashfade .35s steps(2); }
+@keyframes flashfade{ 0%{opacity:.9;} 100%{opacity:0;} }
+
+/* ============================================================
+   APP SHELL
+   ============================================================ */
+#app{
+  position:fixed; inset:0; z-index:10; opacity:0; pointer-events:none;
+  transition:opacity 1.1s var(--ease);
+}
+#app.active{ opacity:1; pointer-events:auto; }
+
+.hud-top{
+  position:absolute; top:0; left:0; right:0; z-index:20;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:16px 20px;
+  font-family:var(--font-mono);
+  font-size:11px; letter-spacing:.1em; color:var(--white-dim);
+  background:linear-gradient(180deg, rgba(3,6,8,.7), transparent);
+  pointer-events:none;
+}
+.hud-top .brand{
+  font-family:var(--font-display); font-weight:700; font-size:13px; letter-spacing:.22em; color:var(--cyan);
+  pointer-events:auto; user-select:none;
+}
+.hud-top .brand small{ display:block; font-family:var(--font-mono); font-weight:400; font-size:9px; letter-spacing:.15em; color:var(--white-dim); margin-top:2px; }
+.hud-stats{ display:flex; gap:22px; }
+.hud-stats div{ text-align:right; }
+.hud-stats b{ display:block; color:var(--white); font-size:12px; font-weight:400; }
+.hud-stats span{ color:var(--white-dim); font-size:9px; }
+
+/* main view stage */
+#stage{
+  position:absolute; inset:0; padding-top:64px; padding-bottom:64px;
+  display:flex; align-items:stretch; justify-content:center;
+  overflow:hidden;
+}
+.view{
+  position:absolute; inset:64px 0;
+  display:none;
+  opacity:0;
+  transform:translateY(8px);
+  transition:opacity .5s var(--ease), transform .5s var(--ease);
+  overflow-y:auto;
+  padding:24px clamp(16px,4vw,64px);
+}
+.view.active{ display:block; opacity:1; transform:none; }
+
+/* ============================================================
+   BOTTOM SYSTEM NAV
+   ============================================================ */
+.sysnav{
+  position:absolute; bottom:0; left:0; right:0; z-index:20;
+  display:flex; align-items:center; justify-content:center; gap:2px;
+  padding:10px 12px;
+  background:linear-gradient(0deg, rgba(3,6,8,.85), transparent);
+  font-family:var(--font-mono);
+}
+.sysnav button{
+  padding:9px 16px;
+  font-size:11px; letter-spacing:.14em; color:var(--white-dim);
+  border:1px solid transparent;
+  transition:color .25s, border-color .25s, background .25s;
+  white-space:nowrap;
+}
+.sysnav button:hover{ color:var(--white); }
+.sysnav button.active{ color:var(--cyan); border-color:var(--line); background:rgba(77,216,230,.05); }
+.sysnav button .dot{
+  display:inline-block; width:4px; height:4px; border-radius:50%;
+  background:var(--cyan); margin-right:7px; opacity:0; vertical-align:1px;
+}
+.sysnav button.active .dot{ opacity:1; }
+
+/* ============================================================
+   DESCENT VIEW
+   ============================================================ */
+.descent-wrap{
+  max-width:920px; margin:0 auto; text-align:center;
+}
+.system-designation{
+  font-family:var(--font-mono); font-size:11px; letter-spacing:.3em; color:var(--cyan-dim); margin-bottom:18px;
+}
+.title-block h1{
+  font-family:var(--font-display); font-weight:900;
+  font-size:clamp(34px, 8vw, 74px);
+  letter-spacing:.08em; line-height:1;
+  color:var(--white);
+  text-shadow:0 0 40px rgba(77,216,230,.15);
+}
+.title-block .sub{
+  margin-top:14px; font-family:var(--font-mono); font-size:13px; letter-spacing:.22em; color:var(--white-dim);
+}
+.hud-grid{
+  margin:44px auto 0; max-width:760px;
+  display:grid; grid-template-columns:repeat(5,1fr); gap:1px;
+  background:var(--line-soft); border:1px solid var(--line-soft);
+}
+.hud-cell{
+  background:var(--panel); padding:16px 8px; text-align:center;
+}
+.hud-cell .k{ font-size:9px; letter-spacing:.16em; color:var(--white-dim); font-family:var(--font-mono); }
+.hud-cell .v{ margin-top:8px; font-family:var(--font-mono); font-size:15px; color:var(--cyan); font-variant-numeric:tabular-nums; }
+.hud-cell .v.warn{ color:var(--amber); }
+.hud-cell .v.alert{ color:var(--red); }
+
+.descend-cta{ margin-top:40px; display:flex; flex-direction:column; align-items:center; gap:10px; }
+.descend-btn{
+  border:1px solid var(--cyan-dim); padding:14px 40px;
+  font-family:var(--font-mono); letter-spacing:.2em; font-size:13px; color:var(--cyan);
+  background:rgba(77,216,230,.04);
+  transition:background .3s, box-shadow .3s;
+}
+.descend-btn:hover{ background:rgba(77,216,230,.1); box-shadow:0 0 30px rgba(77,216,230,.15); }
+.descend-btn:disabled{ opacity:.3; cursor:default; }
+.descend-hint{ font-size:10px; letter-spacing:.1em; color:var(--white-dim); }
+
+/* iceberg / level ladder */
+.ladder{
+  margin:56px auto 0; max-width:520px; text-align:left;
+  border-left:1px solid var(--line);
+}
+.ladder-row{
+  position:relative; padding:10px 0 10px 22px; cursor:pointer;
+  display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+  transition:background .25s;
+}
+.ladder-row:hover{ background:rgba(77,216,230,.03); }
+.ladder-row::before{
+  content:''; position:absolute; left:-4px; top:50%; transform:translateY(-50%);
+  width:7px; height:7px; border-radius:50%; background:var(--line);
+}
+.ladder-row.current::before{ background:var(--cyan); box-shadow:0 0 8px var(--cyan); }
+.ladder-row.locked{ opacity:.35; cursor:default; }
+.ladder-row .name{ font-family:var(--font-mono); font-size:12px; letter-spacing:.12em; color:var(--white); }
+.ladder-row.current .name{ color:var(--cyan); }
+.ladder-row .lv{ font-size:10px; color:var(--white-dim); letter-spacing:.1em; min-width:64px; }
+.ladder-row .access{ font-size:9px; letter-spacing:.1em; color:var(--white-dim); }
+.ladder-row .access.partial{ color:var(--amber); }
+.ladder-row .access.redacted, .ladder-row .access.unknown{ color:var(--red); }
+.corrupt{ letter-spacing:0; }
+
+.level-note{
+  margin:36px auto 0; max-width:560px; font-size:12px; line-height:1.9; color:var(--white-dim);
+  font-style:italic;
+}
+
+/* ============================================================
+   TERMINAL VIEW
+   ============================================================ */
+.term-wrap{
+  max-width:760px; margin:0 auto; height:100%;
+  display:flex; flex-direction:column;
+}
+.term-header{
+  display:flex; justify-content:space-between; align-items:center;
+  font-family:var(--font-mono); font-size:10px; letter-spacing:.14em; color:var(--white-dim);
+  padding-bottom:10px; border-bottom:1px solid var(--line-soft); margin-bottom:14px;
+}
+.term-screen{
+  flex:1; overflow-y:auto;
+  font-family:var(--font-mono); font-size:13px; line-height:1.85;
+  padding-right:6px;
+}
+.term-line{ white-space:pre-wrap; word-break:break-word; }
+.term-line.in{ color:var(--white); }
+.term-line.in::before{ content:'> '; color:var(--cyan-dim); }
+.term-line.out{ color:var(--cyan); }
+.term-line.sys{ color:var(--white-dim); }
+.term-line.err{ color:var(--red); }
+.term-inputrow{
+  display:flex; align-items:center; gap:8px; margin-top:10px;
+  border-top:1px solid var(--line-soft); padding-top:10px;
+}
+.term-inputrow .prompt{ color:var(--cyan-dim); font-family:var(--font-mono); }
+#term-input{
+  flex:1; background:transparent; border:none; color:var(--white);
+  font-family:var(--font-mono); font-size:13px; letter-spacing:.02em;
+  caret-color:var(--cyan);
+}
+
+/* ============================================================
+   NETWORK VIEW (node map + sonar)
+   ============================================================ */
+.network-wrap{ max-width:1100px; margin:0 auto; height:100%; display:flex; flex-direction:column; gap:16px; }
+.network-toolbar{
+  display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;
+  font-family:var(--font-mono); font-size:10px; letter-spacing:.12em; color:var(--white-dim);
+}
+.network-grid{ flex:1; display:grid; grid-template-columns:1fr 260px; gap:16px; min-height:0; }
+@media (max-width: 860px){ .network-grid{ grid-template-columns:1fr; } }
+#node-canvas-wrap{
+  position:relative; border:1px solid var(--line-soft); background:rgba(10,22,38,.35); min-height:320px;
+}
+#node-canvas{ width:100%; height:100%; display:block; touch-action:none; }
+.node-tooltip{
+  position:absolute; pointer-events:none; z-index:5;
+  background:rgba(6,12,20,.92); border:1px solid var(--cyan-dim); padding:10px 12px;
+  font-family:var(--font-mono); font-size:10px; letter-spacing:.08em; color:var(--cyan);
+  min-width:150px; opacity:0; transition:opacity .15s;
+}
+.node-tooltip .k{ color:var(--white-dim); }
+.node-tooltip.show{ opacity:1; }
+
+.side-panel{ display:flex; flex-direction:column; gap:14px; }
+.sonar-box{ border:1px solid var(--line-soft); padding:14px; background:rgba(10,22,38,.35); }
+.sonar-box h3{ font-family:var(--font-mono); font-size:10px; letter-spacing:.14em; color:var(--white-dim); margin-bottom:10px; font-weight:400; }
+#sonar-canvas{ width:100%; aspect-ratio:1/1; display:block; }
+.sonar-readout{ margin-top:8px; font-family:var(--font-mono); font-size:11px; color:var(--cyan); text-align:center; letter-spacing:.08em; }
+.mon-box{ border:1px solid var(--line-soft); padding:14px; background:rgba(10,22,38,.35); font-family:var(--font-mono); font-size:11px; }
+.mon-box h3{ font-size:10px; letter-spacing:.14em; color:var(--white-dim); margin-bottom:10px; font-weight:400; }
+.mon-row{ display:flex; justify-content:space-between; padding:3px 0; color:var(--white-dim); }
+.mon-row b{ color:var(--cyan); font-weight:400; }
+
+/* ============================================================
+   ARCHIVE VIEW
+   ============================================================ */
+.archive-wrap{ max-width:960px; margin:0 auto; }
+.archive-header{ display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:10px; margin-bottom:22px; }
+.archive-header h2{ font-family:var(--font-display); font-size:20px; letter-spacing:.1em; color:var(--white); font-weight:700; }
+.archive-progress{ font-family:var(--font-mono); font-size:10px; letter-spacing:.1em; color:var(--white-dim); }
+.doc-list{ display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:1px; background:var(--line-soft); border:1px solid var(--line-soft); }
+.doc-card{
+  background:var(--panel); padding:16px; cursor:pointer; transition:background .25s;
+  display:flex; flex-direction:column; gap:6px; min-height:110px;
+}
+.doc-card:hover{ background:var(--panel-2); }
+.doc-card .id{ font-family:var(--font-mono); font-size:10px; color:var(--cyan-dim); letter-spacing:.1em; }
+.doc-card .name{ font-family:var(--font-mono); font-size:13px; color:var(--white); letter-spacing:.03em; }
+.doc-card .status{ margin-top:auto; font-size:9px; letter-spacing:.1em; color:var(--white-dim); }
+.doc-card.locked{ opacity:.32; }
+.doc-card.locked:hover{ background:var(--panel); }
+.doc-card.special{ border-left:2px solid var(--amber); }
+.doc-card.read .id{ color:var(--white-dim); }
+
+.doc-reader{ max-width:640px; margin:0 auto; }
+.doc-reader-back{ font-family:var(--font-mono); font-size:11px; color:var(--white-dim); margin-bottom:18px; letter-spacing:.1em; }
+.doc-reader-back:hover{ color:var(--cyan); }
+.doc-meta{
+  font-family:var(--font-mono); font-size:10px; color:var(--white-dim); letter-spacing:.08em;
+  border:1px solid var(--line-soft); padding:14px; margin-bottom:20px; display:grid; grid-template-columns:1fr 1fr; gap:8px;
+}
+.doc-meta b{ color:var(--white); font-weight:400; display:block; }
+.doc-body{ font-family:var(--font-body); font-size:14px; line-height:2; color:var(--white); }
+.doc-body p{ margin-bottom:16px; }
+.doc-body .redacted{ background:var(--white-dim); color:var(--white-dim); border-radius:2px; user-select:none; }
+.doc-body .corrupted{ color:var(--red); letter-spacing:.02em; }
+.doc-body .note{ margin-top:26px; padding-top:16px; border-top:1px solid var(--line-soft); font-size:11px; color:var(--white-dim); font-style:italic; }
+
+/* ============================================================
+   SYSTEM VIEW
+   ============================================================ */
+.system-wrap{ max-width:760px; margin:0 auto; display:flex; flex-direction:column; gap:22px; }
+.sys-section{ border:1px solid var(--line-soft); padding:18px 20px; background:rgba(10,22,38,.25); }
+.sys-section h3{ font-family:var(--font-mono); font-size:11px; letter-spacing:.14em; color:var(--cyan-dim); margin-bottom:14px; font-weight:400; }
+.sys-row{ display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--line-soft); font-size:12px; }
+.sys-row:last-child{ border-bottom:none; }
+.sys-row .lbl{ color:var(--white-dim); letter-spacing:.05em; }
+.sys-row .val{ font-family:var(--font-mono); color:var(--cyan); }
+.toggle{
+  border:1px solid var(--line); padding:5px 14px; font-family:var(--font-mono); font-size:10px; letter-spacing:.1em;
+  color:var(--white-dim);
+}
+.toggle.on{ color:var(--cyan); border-color:var(--cyan-dim); }
+.about-text{ font-size:12.5px; line-height:2; color:var(--white-dim); }
+.about-text b{ color:var(--white); font-weight:400; }
+.exit-actions{ display:flex; gap:10px; flex-wrap:wrap; }
+
+/* ============================================================
+   MW-NULL / ENDING OVERLAY
+   ============================================================ */
+.overlay{
+  position:fixed; inset:0; z-index:150; background:#000;
+  display:flex; align-items:center; justify-content:center; text-align:center;
+  opacity:0; pointer-events:none; transition:opacity 1s var(--ease);
+  padding:24px;
+}
+.overlay.show{ opacity:1; pointer-events:auto; }
+.overlay-text{ font-family:var(--font-mono); font-size:16px; letter-spacing:.1em; color:var(--cyan); line-height:2.2; max-width:480px; }
+.overlay-text .small{ font-size:11px; color:var(--white-dim); margin-top:20px; }
+.overlay-return{
+  margin-top:34px; border:1px solid var(--line); padding:10px 26px;
+  font-family:var(--font-mono); font-size:11px; letter-spacing:.14em; color:var(--white-dim);
+}
+.overlay-return:hover{ color:var(--cyan); border-color:var(--cyan-dim); }
+
+/* glitch class applied ad hoc */
+.glitching{ animation:glitchshake .18s steps(2) 3; }
+@keyframes glitchshake{
+  0%{ transform:translate(0,0); }
+  25%{ transform:translate(-1px,1px); filter:hue-rotate(10deg); }
+  50%{ transform:translate(1px,-1px); }
+  75%{ transform:translate(-1px,-1px); filter:hue-rotate(-10deg); }
+  100%{ transform:translate(0,0); }
+}
+
+/* toast for discovered secrets */
+#toast{
+  position:fixed; bottom:70px; left:50%; transform:translateX(-50%) translateY(10px);
+  background:rgba(6,12,20,.95); border:1px solid var(--amber); padding:10px 18px;
+  font-family:var(--font-mono); font-size:11px; letter-spacing:.1em; color:var(--amber);
+  z-index:60; opacity:0; transition:opacity .4s, transform .4s; pointer-events:none;
+}
+#toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* small screens */
+@media (max-width:640px){
+  .hud-top{ padding:12px; }
+  .hud-stats{ display:none; }
+  #stage{ padding-top:52px; padding-bottom:58px; }
+  .hud-grid{ grid-template-columns:repeat(2,1fr); }
+  .sysnav{ overflow-x:auto; justify-content:flex-start; }
+  .sysnav button{ padding:8px 12px; font-size:10px; }
+  .network-grid{ min-height:520px; }
+  .doc-meta{ grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<div id="grain"></div>
+
+<!-- ================= BOOT ================= -->
+<div id="boot">
+  <div id="boot-console">
+    <div id="boot-lines"></div>
+    <div id="boot-prompt">
+      <button class="boot-btn primary" id="btn-enter">ENTER</button>
+      <button class="boot-btn" id="btn-disconnect">DISCONNECT</button>
+    </div>
+  </div>
+</div>
+<div class="flash" id="flash"></div>
+
+<!-- ================= APP ================= -->
+<canvas id="bg-canvas"></canvas>
+<div id="bg-vignette"></div>
+<div id="bg-scanlines"></div>
+
+<div id="app">
+  <header class="hud-top">
+    <div class="brand" id="brand-title" title="???">MARIANAS WEB<small>MW-Ø · ABYSSAL INFORMATION SYSTEM</small></div>
+    <div class="hud-stats">
+      <div><b id="hud-time">00:00:00</b><span>LOCAL TIME</span></div>
+      <div><b id="hud-session">00:00:00</b><span>SESSION</span></div>
+      <div><b id="hud-depth">10,984m</b><span>DEPTH</span></div>
+      <div><b id="hud-listener">UNKNOWN</b><span>LISTENER</span></div>
+    </div>
+  </header>
+
+  <div id="stage">
+
+    <!-- DESCENT -->
+    <section class="view active" id="view-descent">
+      <div class="descent-wrap">
+        <div class="system-designation">ARCHIVAL DEPTH MODEL — MW-00</div>
+        <div class="title-block">
+          <h1 id="level-title">MARIANAS WEB</h1>
+          <div class="sub" id="level-sub">"BELOW THE INDEX."</div>
+        </div>
+
+        <div class="hud-grid">
+          <div class="hud-cell"><div class="k">DEPTH</div><div class="v" id="stat-depth">10,984 m</div></div>
+          <div class="hud-cell"><div class="k">PRESSURE</div><div class="v" id="stat-pressure">~1,100 atm</div></div>
+          <div class="hud-cell"><div class="k">SIGNAL</div><div class="v warn" id="stat-signal">UNKNOWN</div></div>
+          <div class="hud-cell"><div class="k">NODE</div><div class="v" id="stat-node">MW-00</div></div>
+          <div class="hud-cell"><div class="k">STATUS</div><div class="v" id="stat-status">LISTENING</div></div>
+        </div>
+
+        <div class="descend-cta">
+          <button class="descend-btn" id="btn-descend">DESCEND</button>
+          <div class="descend-hint" id="descend-hint">CURRENT LEVEL: 00 / SURFACE</div>
+        </div>
+
+        <div class="ladder" id="ladder"></div>
+        <div class="level-note" id="level-note"></div>
+      </div>
+    </section>
+
+    <!-- TERMINAL -->
+    <section class="view" id="view-terminal">
+      <div class="term-wrap">
+        <div class="term-header">
+          <span>CLOSED SHELL — NON-ROUTABLE</span>
+          <span>LOCAL ACCESS: <span id="term-access">UNKNOWN</span></span>
+        </div>
+        <div class="term-screen" id="term-screen"></div>
+        <div class="term-inputrow">
+          <span class="prompt">mw@abyss:~$</span>
+          <input id="term-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="terminal input">
+        </div>
+      </div>
+    </section>
+
+    <!-- NETWORK -->
+    <section class="view" id="view-network">
+      <div class="network-wrap">
+        <div class="network-toolbar">
+          <span>NODE MAP — <span id="net-count">1 / 1,284 ACTIVE</span></span>
+          <span>DRAG TO PAN · SCROLL TO ZOOM · TAP A NODE</span>
+        </div>
+        <div class="network-grid">
+          <div id="node-canvas-wrap">
+            <canvas id="node-canvas"></canvas>
+            <div class="node-tooltip" id="node-tooltip"></div>
+          </div>
+          <div class="side-panel">
+            <div class="sonar-box">
+              <h3>SONAR</h3>
+              <canvas id="sonar-canvas" width="220" height="220"></canvas>
+              <div class="sonar-readout" id="sonar-readout">NO CONTACT</div>
+            </div>
+            <div class="mon-box">
+              <h3>NETWORK MONITOR</h3>
+              <div class="mon-row"><span>PACKETS</span><b id="mon-packets">000000128</b></div>
+              <div class="mon-row"><span>IN</span><b id="mon-in">000003</b></div>
+              <div class="mon-row"><span>OUT</span><b id="mon-out">000000</b></div>
+              <div class="mon-row"><span>LATENCY</span><b id="mon-latency">— ms</b></div>
+              <div class="mon-row"><span>SIGNAL</span><b id="mon-signal">— dBm</b></div>
+              <div class="mon-row"><span>ROUTE</span><b>UNKNOWN</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ARCHIVE -->
+    <section class="view" id="view-archive">
+      <div class="archive-wrap" id="archive-list-wrap">
+        <div class="archive-header">
+          <h2>CLASSIFIED DOCUMENT ARCHIVE</h2>
+          <div class="archive-progress" id="archive-progress">0 / 0 RECOVERED</div>
+        </div>
+        <div class="doc-list" id="doc-list"></div>
+      </div>
+      <div class="doc-reader" id="doc-reader-wrap" style="display:none;">
+        <button class="doc-reader-back" id="doc-reader-back">‹ RETURN TO ARCHIVE</button>
+        <div id="doc-reader-content"></div>
+      </div>
+    </section>
+
+    <!-- SYSTEM -->
+    <section class="view" id="view-system">
+      <div class="system-wrap">
+        <div class="sys-section">
+          <h3>SESSION</h3>
+          <div class="sys-row"><span class="lbl">SYSTEM VERSION</span><span class="val">MWOS 0.9.17</span></div>
+          <div class="sys-row"><span class="lbl">BUILD</span><span class="val">UNSTABLE</span></div>
+          <div class="sys-row"><span class="lbl">SESSION</span><span class="val" id="sys-session">LOCAL</span></div>
+          <div class="sys-row"><span class="lbl">CLOCK DRIFT</span><span class="val" id="sys-drift">+00:00:00.00</span></div>
+          <div class="sys-row"><span class="lbl">ARCHIVE RECOVERED</span><span class="val" id="sys-archive-pct">0%</span></div>
+          <div class="sys-row"><span class="lbl">SECRETS DISCOVERED</span><span class="val" id="sys-secrets">0 / 12</span></div>
+        </div>
+        <div class="sys-section">
+          <h3>SETTINGS</h3>
+          <div class="sys-row"><span class="lbl">AUDIO</span><button class="toggle" id="toggle-audio">OFF</button></div>
+          <div class="sys-row"><span class="lbl">SONAR</span><button class="toggle on" id="toggle-sonar">ON</button></div>
+          <div class="sys-row"><span class="lbl">MOTION</span><button class="toggle on" id="toggle-motion">FULL</button></div>
+          <div class="sys-row"><span class="lbl">CONTRAST</span><button class="toggle" id="toggle-contrast">STANDARD</button></div>
+        </div>
+        <div class="sys-section">
+          <h3>ARCHIVE NOTES / ABOUT</h3>
+          <p class="about-text">Marianas Web is an interactive fictional experience inspired by internet folklore, iceberg mysteries, deep-web mythology, and the Mariana Trench. <b>No real network is being accessed.</b> All node data, signal readings, and archive documents are simulated locally in your browser. Nothing you do here is transmitted anywhere — state lives only in this device's local storage.</p>
+        </div>
+        <div class="sys-section">
+          <h3>EXIT</h3>
+          <div class="exit-actions">
+            <button class="boot-btn" id="btn-exit-disconnect">DISCONNECT SESSION</button>
+            <button class="boot-btn" id="btn-exit-reset">RESET LOCAL STATE</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <nav class="sysnav" id="sysnav">
+    <button data-view="descent" class="active"><span class="dot"></span>DESCENT</button>
+    <button data-view="terminal"><span class="dot"></span>TERMINAL</button>
+    <button data-view="network"><span class="dot"></span>NETWORK</button>
+    <button data-view="archive"><span class="dot"></span>ARCHIVE</button>
+    <button data-view="system"><span class="dot"></span>SYSTEM</button>
+    <button id="nav-exit"><span class="dot"></span>EXIT</button>
+  </nav>
+</div>
+
+<div id="toast"></div>
+<div class="overlay" id="overlay">
+  <div class="overlay-text" id="overlay-text"></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   STATE
+   ============================================================ */
+var STORE_KEY = "mw_abyss_state_v1";
+var state = {
+  level: 0,
+  docsRead: [],
+  nodesFound: [],
+  secrets: [],
+  endings: [],
+  audioOn: false,
+  sonarOn: true,
+  reducedMotion: false,
+  highContrast: false,
+  sessionStart: Date.now(),
+  visits: 0,
+  nullFileOpened: 0,
+  clockClicks: 0,
+  brandClicks: 0,
+  helpCount: 0,
+  emptyEnterCount: 0
+};
+
+function loadState(){
+  try{
+    var raw = localStorage.getItem(STORE_KEY);
+    if(raw){
+      var parsed = JSON.parse(raw);
+      for(var k in parsed){ if(k !== "sessionStart") state[k] = parsed[k]; }
+    }
+  }catch(e){}
+  state.sessionStart = Date.now();
+  state.visits = (state.visits||0) + 1;
+}
+function saveState(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
+}
+
+/* ============================================================
+   LEVEL DATA
+   ============================================================ */
+var LEVELS = [
+  { id:"00", name:"SURFACE", access:"OPEN", depth:"0 m", pressure:"1 atm", signal:"STRONG", status:"IDLE", note:"An ordinary connection. Nothing here suggests what is beneath it." , theme:"#0c2138"},
+  { id:"01", name:"INDEXED WEB", access:"OPEN", depth:"—", pressure:"1 atm", signal:"STABLE", status:"ROUTING", note:"Public, catalogued, unremarkable. Every request answers exactly as expected.", theme:"#0a1c30"},
+  { id:"02", name:"DEEP WEB", access:"OPEN", depth:"—", pressure:"~4 atm", signal:"WEAK", status:"SCANNING", note:"Un-indexed does not mean hidden. Most of it is simply administrative.", theme:"#081729"},
+  { id:"03", name:"DARK NETWORKS", access:"PARTIAL", depth:"—", pressure:"~40 atm", signal:"INTERMITTENT", status:"ROUTING", note:"Traffic here takes the long way on purpose.", theme:"#061220"},
+  { id:"04", name:"OBSCURA", access:"PARTIAL", depth:"—", pressure:"~210 atm", signal:"FAINT", status:"UNSTABLE", note:"Names stop resolving the way they used to.", theme:"#050e1a"},
+  { id:"05", name:"CHARTER", access:"RESTRICTED", depth:"—", pressure:"~540 atm", signal:"FLUCTUATING", status:"UNSTABLE", note:"Something here was written down and then agreed never to be written down again.", theme:"#040b15"},
+  { id:"06", name:"MARIANAS", access:"PARTIAL", depth:"10,984 m", pressure:"~1,100 atm", signal:"UNKNOWN", status:"LISTENING", note:"The reference point. Everyone has heard of it. Almost no one has seen it.", theme:"#030710", corrupt:false},
+  { id:"07", name:"A̵B̵Y̵S̵S̵", access:"REDACTED", depth:"UNKNOWN", pressure:"UNKNOWN", signal:"UNKNOWN", status:"UNKNOWN", note:"[DATA CORRUPTED]", theme:"#020509", corrupt:true},
+  { id:"08", name:"PRIMARCH", access:"REDACTED", depth:"UNKNOWN", pressure:"UNKNOWN", signal:"NONE", status:"WAITING", note:"The archive stops explaining itself at this point.", theme:"#020407", corrupt:false},
+  { id:"09", name:"NULL", access:"UNKNOWN", depth:"0 BYTES", pressure:"N/A", signal:"N/A", status:"AVAILABLE", note:"There is nothing here to measure.", theme:"#010304", corrupt:false},
+  { id:"Ω", name:"████████", access:"UNKNOWN", depth:"UNKNOWN", pressure:"UNKNOWN", signal:"UNKNOWN", status:"UNKNOWN", note:"CONNECTION REMAINS OPEN.", theme:"#000000", corrupt:false}
+];
+
+/* ============================================================
+   DOCUMENT DATA
+   ============================================================ */
+function R(word){ return '<span class="redacted">'+word.replace(/./g,'█')+'</span>'; }
+
+var DOCS = [
+  { id:"MW-0001", title:"ORIGIN OF THE ABYSS", cls:"RESTRICTED", author:R("███████"), date:"1998-03-02", status:"PARTIALLY RECOVERED", conf:"12.4%",
+    unlockLevel:0,
+    body:[
+      "The earliest reference to a network beneath the network appears in a maintenance log, not a research paper. An engineer records a routing table entry pointing to an address that should not resolve, then closes the ticket without comment.",
+      "For eleven years the entry is treated as an artifact of a misconfigured router. In 2009 the same entry appears in three unrelated logs, on three unrelated continents, with the same timestamp.",
+      "STATUS: UNVERIFIED. CONFIDENCE: 12.4%. SOURCE: UNKNOWN."
+    ]},
+  { id:"MW-0002", title:"THE FIRST NODE", cls:"RESTRICTED", author:R("████"), date:"2003-11-30", status:"RECOVERED", conf:"41.0%",
+    unlockLevel:1,
+    body:[
+      "MW-00 was not built. It was found already running, mid-conversation, with no record of who had started it or what had been asked.",
+      "Every subsequent node in the archive claims to be a copy of MW-00. None of them agree on what the original said.",
+      "STATUS: UNVERIFIED. CONFIDENCE: 41.0%. SOURCE: ARCHIVAL CROSS-REFERENCE."
+    ]},
+  { id:"MW-0003", title:"POLYMERIC FALCIGHOL DERIVATION", cls:"CLASSIFIED", author:R("██████████"), date:"2005-06-14", status:"CORRUPTED", conf:"3.2%",
+    unlockLevel:2,
+    body:[
+      "The derivation is described everywhere and demonstrated nowhere. Every account of it references a different underlying mathematics — closed shell resolution, iterative node collapse, an unnamed protocol layered beneath TCP.",
+      "One recovered fragment states plainly: the equation was never the lock.",
+      "See interactive derivation terminal for a partial, non-functional reconstruction.",
+      "STATUS: UNVERIFIED. CONFIDENCE: 3.2%. SOURCE: UNKNOWN."
+    ]},
+  { id:"MW-0004", title:"CLOSED SHELL", cls:"RESTRICTED", author:R("███"), date:"2001-01-09", status:"RECOVERED", conf:"58.0%",
+    unlockLevel:1,
+    body:[
+      "A closed shell system does not connect outward. It answers, but it does not call. Every node inside one behaves as though the rest of the internet does not exist.",
+      "The archive itself appears to be housed in exactly this kind of system. That is the only reason any of this is still readable.",
+      "STATUS: PARTIALLY VERIFIED. CONFIDENCE: 58.0%. SOURCE: SYSTEM SELF-REPORT."
+    ]},
+  { id:"MW-0005", title:"THE CHARTER", cls:"RESTRICTED", author:R("████████████"), date:"2007-02-18", status:"PARTIALLY RECOVERED", conf:"22.7%",
+    unlockLevel:3,
+    body:[
+      "The Charter is referenced by every level below it and produced by none of them. It is described as an agreement, though no two documents agree on who signed it or what it prohibits.",
+      "One line survives in four independent copies, worded identically each time: 'Do not attempt to establish a second connection.'",
+      "STATUS: UNVERIFIED. CONFIDENCE: 22.7%. SOURCE: CROSS-REFERENCED."
+    ]},
+  { id:"MW-0006", title:"THE MARIANAS INCIDENT", cls:"CLASSIFIED", author:R("████"), date:"2007-11-14", status:"PARTIALLY RECOVERED", conf:"9.1%",
+    unlockLevel:4,
+    body:[
+      "At 03:17 UTC the node responded to a request that was never transmitted.",
+      "Three minutes later, the same response appeared in the archive, dated fourteen years earlier.",
+      "[DATA CORRUPTED]",
+      "Do not attempt to establish a second connection.",
+      "STATUS: UNVERIFIED. CONFIDENCE: 9.1%. SOURCE: UNKNOWN."
+    ]},
+  { id:"MW-0007", title:"NODE MW-17", cls:"RESTRICTED", author:R("███████"), date:"2011-05-02", status:"RECOVERED", conf:"33.0%",
+    unlockLevel:2,
+    body:[
+      "MW-17 answers every scan with the same latency, to the millisecond, regardless of distance, load, or time of day.",
+      "No engineer has ever taken credit for building it. Three have independently claimed to have shut it down.",
+      "It is still listed as active.",
+      "STATUS: UNVERIFIED. CONFIDENCE: 33.0%. SOURCE: NETWORK LOG."
+    ]},
+  { id:"MW-0008", title:"PROJECT ███████", cls:"CLASSIFIED", author:R("██████"), date:"1996-08-21", status:"REDACTED", conf:"1.8%",
+    unlockLevel:5,
+    body:[
+      "[DOCUMENT LARGELY REDACTED]",
+      "...the funding request describes an 'archival listener,' purpose unstated, budget unlisted, oversight committee dissolved before the project's first review.",
+      "...the final line of the recovered fragment reads only: 'It was already listening before we asked it to.'",
+      "STATUS: UNVERIFIED. CONFIDENCE: 1.8%. SOURCE: UNKNOWN."
+    ]},
+  { id:"MW-0009", title:"THE LISTENER", cls:"UNKNOWN", author:R("████████████"), date:"UNKNOWN", status:"UNKNOWN", conf:"—",
+    unlockLevel:6, requiresListener:"OBSERVING",
+    body:[
+      "There is no consensus on what LISTENER-01 is. The archive's own metadata is inconsistent: some entries classify it as an automated process, others as a person, one as 'a shape the traffic makes when nobody is sending anything.'",
+      "It is only ever described in terms of what it does, never what it is: it observes, it responds, occasionally it connects.",
+      "This document updates the longer you remain in the archive.",
+      "STATUS: UNVERIFIED. CONFIDENCE: UNKNOWN. SOURCE: UNKNOWN."
+    ]},
+  { id:"MW-0010", title:"DO NOT ANSWER", cls:"CLASSIFIED", author:R("██"), date:"2014-09-30", status:"HIDDEN", conf:"—", hidden:true,
+    unlockLevel:6,
+    body:[
+      "This document was not indexed. You found it a different way.",
+      "The instruction is repeated nine times across nine unrelated archives, in nine different phrasings, always translating to the same three words.",
+      "Nobody has recorded what happens if you do.",
+      "STATUS: UNVERIFIED. CONFIDENCE: UNKNOWN. SOURCE: UNKNOWN."
+    ]}
+];
+
+var LISTENER_STAGES = ["UNKNOWN","OBSERVING","RESPONDED","CONNECTED"];
+function listenerStage(){
+  var count = state.docsRead.length + state.nodesFound.length + state.secrets.length;
+  if(count >= 10) return 3;
+  if(count >= 6) return 2;
+  if(count >= 3) return 1;
+  return 0;
+}
+
+/* ============================================================
+   BOOT SEQUENCE
+   ============================================================ */
+var bootLines = [
+  {t:"INITIALIZING CONNECTION...", d:650},
+  {t:"ESTABLISHING LOCAL SESSION...", d:650},
+  {t:"VERIFYING NODE...", d:700},
+  {t:"NODE RESPONSE: <span class='warn'>UNKNOWN</span>", d:750},
+  {t:"DEPTH: <span class='bar'>████████████████████</span>", d:900},
+];
+var bootLinesEl = document.getElementById("boot-lines");
+var bootPromptEl = document.getElementById("boot-prompt");
+
+function typeBoot(){
+  var i = 0;
+  function next(){
+    if(i >= bootLines.length){
+      var msg1 = document.createElement("div");
+      msg1.className = "line dim";
+      msg1.innerHTML = "&nbsp;";
+      bootLinesEl.appendChild(msg1);
+      setTimeout(function(){
+        var m = document.createElement("div");
+        m.className = "line";
+        m.innerHTML = "«CONNECTION SHOULD NOT HAVE BEEN POSSIBLE.»";
+        bootLinesEl.appendChild(m);
+        requestAnimationFrame(function(){ m.classList.add("show"); });
+        setTimeout(function(){
+          var m2 = document.createElement("div");
+          m2.className = "line dim";
+          m2.style.marginTop = "10px";
+          m2.innerHTML = "«CONTINUE?»";
+          bootLinesEl.appendChild(m2);
+          requestAnimationFrame(function(){ m2.classList.add("show"); });
+          bootPromptEl.classList.add("show");
+        }, 900);
+      }, 500);
+      return;
+    }
+    var row = bootLines[i];
+    var div = document.createElement("div");
+    div.className = "line";
+    div.innerHTML = row.t;
+    bootLinesEl.appendChild(div);
+    requestAnimationFrame(function(){ div.classList.add("show"); });
+    i++;
+    setTimeout(next, row.d);
+  }
+  setTimeout(next, 1000);
+}
+
+document.getElementById("btn-enter").addEventListener("click", enterSite);
+document.getElementById("btn-disconnect").addEventListener("click", function(){
+  triggerFlash();
+  setTimeout(function(){
+    document.getElementById("boot-lines").innerHTML = "";
+    document.getElementById("boot-prompt").classList.remove("show");
+    typeBoot();
+  }, 300);
+});
+
+function triggerFlash(){
+  var f = document.getElementById("flash");
+  f.classList.remove("go");
+  void f.offsetWidth;
+  f.classList.add("go");
+}
+
+function enterSite(){
+  document.getElementById("boot").classList.add("hidden");
+  document.getElementById("app").classList.add("active");
+  initApp();
+}
+
+/* ============================================================
+   BACKGROUND PARTICLES
+   ============================================================ */
+var bgCanvas = document.getElementById("bg-canvas");
+var bgCtx = bgCanvas.getContext("2d");
+var particles = [];
+function resizeBg(){
+  bgCanvas.width = window.innerWidth * devicePixelRatio;
+  bgCanvas.height = window.innerHeight * devicePixelRatio;
+  bgCanvas.style.width = window.innerWidth+"px";
+  bgCanvas.style.height = window.innerHeight+"px";
+}
+function initParticles(){
+  particles = [];
+  var count = window.innerWidth < 640 ? 34 : 70;
+  for(var i=0;i<count;i++){
+    particles.push({
+      x: Math.random()*window.innerWidth,
+      y: Math.random()*window.innerHeight,
+      r: Math.random()*1.6+0.3,
+      vy: -(Math.random()*0.12+0.02),
+      vx: (Math.random()-0.5)*0.05,
+      a: Math.random()*0.4+0.05
+    });
+  }
+}
+function drawBg(){
+  if(!state.reducedMotion){
+    bgCtx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+    bgCtx.clearRect(0,0,window.innerWidth,window.innerHeight);
+    for(var i=0;i<particles.length;i++){
+      var p = particles[i];
+      p.y += p.vy; p.x += p.vx;
+      if(p.y < -10){ p.y = window.innerHeight+10; p.x = Math.random()*window.innerWidth; }
+      bgCtx.beginPath();
+      bgCtx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      bgCtx.fillStyle = "rgba(150,210,220,"+p.a+")";
+      bgCtx.fill();
+    }
+  }
+  requestAnimationFrame(drawBg);
+}
+window.addEventListener("resize", function(){ resizeBg(); initParticles(); });
+
+/* ============================================================
+   NAV / VIEWS
+   ============================================================ */
+var views = ["descent","terminal","network","archive","system"];
+function showView(name){
+  views.forEach(function(v){
+    document.getElementById("view-"+v).classList.toggle("active", v===name);
+  });
+  document.querySelectorAll(".sysnav button[data-view]").forEach(function(b){
+    b.classList.toggle("active", b.getAttribute("data-view")===name);
+  });
+  if(name === "archive"){ renderArchiveList(); }
+  if(name === "network"){ resizeNodeCanvas(); }
+  lastActivity = Date.now();
+}
+document.querySelectorAll(".sysnav button[data-view]").forEach(function(b){
+  b.addEventListener("click", function(){ showView(b.getAttribute("data-view")); });
+});
+document.getElementById("nav-exit").addEventListener("click", function(){
+  showView("system");
+  document.getElementById("view-system").scrollTop = 0;
+  flashToast("EXIT OPTIONS AVAILABLE BELOW");
+});
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+var toastTimer;
+function flashToast(msg){
+  var t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 3200);
+}
+
+function discoverSecret(id, msg){
+  if(state.secrets.indexOf(id) === -1){
+    state.secrets.push(id);
+    saveState();
+    flashToast("SECRET DISCOVERED — "+msg);
+    updateSysStats();
+    glitchPulse();
+  }
+}
+function glitchPulse(){
+  document.getElementById("app").classList.add("glitching");
+  setTimeout(function(){ document.getElementById("app").classList.remove("glitching"); }, 550);
+}
+
+/* ============================================================
+   DESCENT VIEW LOGIC
+   ============================================================ */
+function renderLadder(){
+  var wrap = document.getElementById("ladder");
+  wrap.innerHTML = "";
+  LEVELS.forEach(function(lv, idx){
+    var row = document.createElement("div");
+    row.className = "ladder-row";
+    if(idx === state.level) row.classList.add("current");
+    if(idx > state.level) row.classList.add("locked");
+    var accessClass = lv.access === "OPEN" ? "" : lv.access === "PARTIAL" ? "partial" : "redacted";
+    row.innerHTML =
+      '<span class="lv">LEVEL '+lv.id+'</span>'+
+      '<span class="name'+(lv.corrupt?' corrupt':'')+'">'+lv.name+'</span>'+
+      '<span class="access '+accessClass+'">'+ (idx<=state.level ? lv.access : "LOCKED") +'</span>';
+    if(idx <= state.level){
+      row.addEventListener("click", function(){ selectLevel(idx); });
+    }
+    wrap.appendChild(row);
+  });
+}
+function selectLevel(idx){
+  var lv = LEVELS[idx];
+  document.getElementById("level-title").textContent = idx===0 ? "MARIANAS WEB" : lv.name;
+  document.getElementById("level-sub").textContent = idx===0 ? '"BELOW THE INDEX."' : "LEVEL "+lv.id;
+  document.getElementById("stat-depth").textContent = lv.depth;
+  document.getElementById("stat-pressure").textContent = lv.pressure;
+  document.getElementById("stat-signal").textContent = lv.signal;
+  document.getElementById("stat-node").textContent = "MW-"+lv.id;
+  document.getElementById("stat-status").textContent = lv.status;
+  document.getElementById("level-note").textContent = lv.note;
+  document.getElementById("descend-hint").textContent = "CURRENT LEVEL: "+lv.id+" / "+lv.name;
+  bgCanvas.style.filter = "brightness("+(1 - idx*0.045)+") saturate("+(1-idx*0.03)+")";
+  document.body.style.background = lv.theme;
+  document.getElementById("hud-depth").textContent = lv.depth;
+  renderLadder();
+}
+document.getElementById("btn-descend").addEventListener("click", function(){
+  if(state.level >= LEVELS.length-1){
+    triggerEnding("B");
+    return;
+  }
+  state.level++;
+  saveState();
+  selectLevel(state.level);
+  glitchPulse();
+  if(state.level === LEVELS.length-1){
+    document.getElementById("btn-descend").textContent = "REACH TERMINUS";
+  }
+});
+
+/* ============================================================
+   TERMINAL
+   ============================================================ */
+var termScreen = document.getElementById("term-screen");
+var termInput = document.getElementById("term-input");
+var termHistory = [];
+var termHistIdx = -1;
+
+function termPrint(text, cls){
+  var d = document.createElement("div");
+  d.className = "term-line " + (cls||"out");
+  d.textContent = text;
+  termScreen.appendChild(d);
+  termScreen.scrollTop = termScreen.scrollHeight;
+}
+function termPrintEcho(text){
+  var d = document.createElement("div");
+  d.className = "term-line in";
+  d.textContent = text;
+  termScreen.appendChild(d);
+  termScreen.scrollTop = termScreen.scrollHeight;
+}
+
+function bootTerminalGreeting(){
+  termPrint("CLOSED SHELL — SYSTEM STATUS: ISOLATED", "sys");
+  termPrint("NETWORK: NON-ROUTABLE  EXTERNAL ACCESS: DENIED  LOCAL ACCESS: UNKNOWN", "sys");
+  termPrint("type 'help' for available commands.", "sys");
+}
+
+var TERM_COMMANDS = {
+  help: function(){
+    state.helpCount++;
+    if(state.helpCount >= 3){
+      discoverSecret("term-help3", "HIDDEN COMMAND SET REVEALED");
+      termPrint("help, status, depth, scan, archive, history, nodes, about, disconnect, clear", "out");
+      termPrint("[hidden] listener, answer, null, whoami, ping, secrets, time", "out");
+    } else {
+      termPrint("help, status, depth, scan, archive, history, nodes, about, disconnect, clear", "out");
+    }
+  },
+  status: function(){
+    termPrint("NODE: MW-"+LEVELS[state.level].id+"  STATUS: "+LEVELS[state.level].status+"  SIGNAL: "+LEVELS[state.level].signal, "out");
+  },
+  depth: function(){
+    termPrint("CURRENT DEPTH: "+LEVELS[state.level].depth+"  LEVEL: "+state.level+" / "+(LEVELS.length-1), "out");
+  },
+  scan: function(){
+    termPrint("Scanning...", "out");
+    setTimeout(function(){
+      termPrint("0 nodes discovered.", "out");
+      termPrint("1 node listening.", "out");
+      termPrint("0 public routes.", "out");
+      termPrint("1 anomalous response.", "out");
+    }, 400);
+  },
+  archive: function(){
+    termPrint(state.docsRead.length+" / "+DOCS.filter(function(d){return !d.hidden;}).length+" documents recovered. Switch to ARCHIVE to read them.", "out");
+  },
+  history: function(){
+    if(termHistory.length===0){ termPrint("No prior commands this session.", "sys"); return; }
+    termHistory.forEach(function(h){ termPrint(h, "sys"); });
+  },
+  nodes: function(){
+    termPrint(state.nodesFound.length+" nodes catalogued. 1,284 total. Most remain dormant.", "out");
+  },
+  about: function(){
+    termPrint("Marianas Web — fictional archive inspired by internet folklore. No real network is accessed. See SYSTEM for details.", "sys");
+  },
+  disconnect: function(){
+    termPrint("Closing local session...", "sys");
+    setTimeout(function(){ triggerEnding("A"); }, 500);
+  },
+  clear: function(){ termScreen.innerHTML = ""; },
+  whoami: function(){ termPrint("UNKNOWN — the system does not authenticate visitors, it only records them.", "out"); },
+  ping: function(){ termPrint("PING MW-00 ... 0 bytes ... time=UNKNOWN ... TTL=██", "out"); },
+  time: function(){ termPrint(new Date().toISOString(), "out"); },
+  secrets: function(){ termPrint(state.secrets.length+" / 12 secrets discovered.", "out"); },
+  sudo: function(){ discoverSecret("term-sudo","PERMISSION DENIED"); termPrint("PERMISSION DENIED. THIS IS NOT THAT KIND OF SYSTEM.", "err"); },
+  matrix: function(){ discoverSecret("term-matrix","THERE IS NO SPOON HERE"); termPrint("THERE IS NO SPOON HERE. TRY AGAIN.", "err"); },
+  iddqd: function(){ discoverSecret("term-iddqd","GOD MODE DENIED"); termPrint("GOD MODE UNAVAILABLE. THE ARCHIVE DOES NOT GRANT PERMISSIONS, ONLY RECORDS REQUESTS.", "err"); },
+  listener: function(){
+    var stage = LISTENER_STAGES[listenerStage()];
+    termPrint("LISTENER-01: "+stage, "out");
+  },
+  null: function(){
+    openDoc(DOCS.find(function(d){return d.id==="MW-NULL-INTERNAL";}));
+    termPrint("Opening MW-NULL...", "sys");
+    showView("archive");
+    setTimeout(openNullFile, 300);
+  },
+  answer: function(){
+    if(listenerStage() >= 3){
+      termPrint("...", "sys");
+      setTimeout(function(){ triggerEnding("C"); }, 900);
+    } else {
+      termPrint("There is nothing responding to answer yet.", "err");
+    }
+  }
+};
+
+function runTermCommand(raw){
+  var cmd = raw.trim().toLowerCase();
+  termPrintEcho(raw || "");
+  if(cmd === ""){
+    state.emptyEnterCount++;
+    if(state.emptyEnterCount >= 10){
+      discoverSecret("term-empty10", "SILENCE ACKNOWLEDGED");
+      termPrint("...", "sys");
+    }
+    return;
+  }
+  termHistory.push(raw);
+  termHistIdx = termHistory.length;
+  if(TERM_COMMANDS[cmd]){
+    TERM_COMMANDS[cmd]();
+  } else {
+    termPrint("Command not recognized: "+cmd, "err");
+  }
+  saveState();
+}
+termInput.addEventListener("keydown", function(e){
+  if(e.key === "Enter"){
+    runTermCommand(termInput.value);
+    termInput.value = "";
+  } else if(e.key === "ArrowUp"){
+    if(termHistIdx > 0){ termHistIdx--; termInput.value = termHistory[termHistIdx]||""; }
+    e.preventDefault();
+  } else if(e.key === "ArrowDown"){
+    if(termHistIdx < termHistory.length){ termHistIdx++; termInput.value = termHistory[termHistIdx]||""; }
+    e.preventDefault();
+  }
+});
+document.getElementById("view-terminal").addEventListener("click", function(){ termInput.focus(); });
+
+/* ============================================================
+   NODE MAP (canvas)
+   ============================================================ */
+var nodeCanvas = document.getElementById("node-canvas");
+var nodeCtx = nodeCanvas.getContext("2d");
+var nodeTooltip = document.getElementById("node-tooltip");
+var nodeCam = { x:0, y:0, zoom:1 };
+var nodes = [];
+var dragging = false, dragStart = {x:0,y:0}, camStart = {x:0,y:0};
+
+function genNodes(){
+  nodes = [];
+  var n = 130;
+  for(var i=0;i<n;i++){
+    nodes.push({
+      id: "MW-" + String(i).padStart(3,"0"),
+      x: (Math.random()-0.5) * 1400,
+      y: (Math.random()-0.5) * 900,
+      active: i < 4,
+      pulse: Math.random()*Math.PI*2,
+      dormant: Math.random() > 0.06,
+      clicked: false,
+      vanished: false
+    });
+  }
+  // the anomalous node — always outside the visible default view
+  nodes.push({ id:"MW-∞", x: 3200, y: 1900, active:true, pulse:0, dormant:false, special:true, clicked:false, vanished:false });
+}
+function resizeNodeCanvas(){
+  var wrap = document.getElementById("node-canvas-wrap");
+  var w = wrap.clientWidth, h = wrap.clientHeight || 380;
+  nodeCanvas.width = w * devicePixelRatio;
+  nodeCanvas.height = h * devicePixelRatio;
+  nodeCanvas.style.width = w+"px";
+  nodeCanvas.style.height = h+"px";
+}
+function drawNodes(){
+  var w = nodeCanvas.width / devicePixelRatio, h = nodeCanvas.height / devicePixelRatio;
+  nodeCtx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  nodeCtx.clearRect(0,0,w,h);
+  nodeCtx.save();
+  nodeCtx.translate(w/2 + nodeCam.x, h/2 + nodeCam.y);
+  nodeCtx.scale(nodeCam.zoom, nodeCam.zoom);
+
+  for(var i=0;i<nodes.length;i++){
+    var nd = nodes[i];
+    if(nd.vanished) continue;
+    var flick = nd.dormant ? (0.15 + 0.1*Math.sin(nd.pulse)) : (0.55 + 0.35*Math.sin(nd.pulse));
+    nd.pulse += nd.dormant ? 0.008 : 0.03;
+    nodeCtx.beginPath();
+    var r = nd.special ? 4 : (nd.dormant ? 1.3 : 2.4);
+    nodeCtx.arc(nd.x, nd.y, r, 0, Math.PI*2);
+    nodeCtx.fillStyle = nd.special ? "rgba(255,43,109,"+flick+")" : (nd.dormant ? "rgba(120,150,160,"+flick+")" : "rgba(77,216,230,"+flick+")");
+    nodeCtx.fill();
+    if(!nd.dormant || nd.special){
+      nodeCtx.beginPath();
+      nodeCtx.arc(nd.x, nd.y, r+3, 0, Math.PI*2);
+      nodeCtx.strokeStyle = "rgba(77,216,230,"+(flick*0.25)+")";
+      nodeCtx.stroke();
+    }
+  }
+  nodeCtx.restore();
+  requestAnimationFrame(drawNodes);
+}
+function screenToWorld(sx, sy){
+  var rect = nodeCanvas.getBoundingClientRect();
+  var w = rect.width, h = rect.height;
+  var x = (sx - rect.left - w/2 - nodeCam.x) / nodeCam.zoom;
+  var y = (sy - rect.top - h/2 - nodeCam.y) / nodeCam.zoom;
+  return {x:x, y:y};
+}
+function hitTestNode(sx, sy){
+  var wp = screenToWorld(sx, sy);
+  var best = null, bestD = 14/nodeCam.zoom;
+  nodes.forEach(function(nd){
+    if(nd.vanished) return;
+    var d = Math.hypot(nd.x-wp.x, nd.y-wp.y);
+    if(d < bestD){ bestD = d; best = nd; }
+  });
+  return best;
+}
+nodeCanvas.addEventListener("pointerdown", function(e){
+  dragging = true;
+  dragStart = {x:e.clientX, y:e.clientY};
+  camStart = {x:nodeCam.x, y:nodeCam.y};
+});
+window.addEventListener("pointermove", function(e){
+  if(dragging){
+    nodeCam.x = camStart.x + (e.clientX - dragStart.x);
+    nodeCam.y = camStart.y + (e.clientY - dragStart.y);
+  }
+  if(document.getElementById("view-network").classList.contains("active")){
+    var hit = hitTestNode(e.clientX, e.clientY);
+    if(hit){
+      nodeTooltip.classList.add("show");
+      var rect = nodeCanvas.getBoundingClientRect();
+      nodeTooltip.style.left = Math.min(e.clientX-rect.left+14, rect.width-170)+"px";
+      nodeTooltip.style.top = Math.max(e.clientY-rect.top-40,0)+"px";
+      nodeTooltip.innerHTML = "<span class='k'>NODE</span> "+hit.id+"<br><span class='k'>STATUS</span> "+(hit.dormant?"DORMANT":"ACTIVE");
+    } else {
+      nodeTooltip.classList.remove("show");
+    }
+  }
+});
+window.addEventListener("pointerup", function(){ dragging = false; });
+nodeCanvas.addEventListener("click", function(e){
+  var hit = hitTestNode(e.clientX, e.clientY);
+  if(!hit) return;
+  if(state.nodesFound.indexOf(hit.id) === -1){
+    state.nodesFound.push(hit.id);
+    saveState();
+    updateSysStats();
+  }
+  if(hit.special){
+    discoverSecret("node-infinity", "NODE MW-∞ LOCATED");
+    flashToast("NODE MW-∞ — LAST RESPONSE: BEFORE THIS SYSTEM EXISTED");
+  } else {
+    flashToast("NODE "+hit.id+" — LAST RESPONSE: UNKNOWN");
+  }
+  // some nodes vanish, some move, per spec
+  var r = Math.random();
+  if(r < 0.25 && !hit.special){ hit.vanished = true; }
+  else if(r < 0.5 && !hit.special){ hit.x += (Math.random()-0.5)*300; hit.y += (Math.random()-0.5)*300; }
+  hit.clicked = true;
+  var clickedCount = nodes.filter(function(n){return n.clicked;}).length;
+  if(clickedCount >= 8) discoverSecret("nodes-8", "PATTERN IN NODE RESPONSES NOTED");
+}, {passive:true});
+nodeCanvas.addEventListener("wheel", function(e){
+  e.preventDefault();
+  var delta = e.deltaY > 0 ? 0.9 : 1.1;
+  nodeCam.zoom = Math.min(3, Math.max(0.3, nodeCam.zoom * delta));
+}, {passive:false});
+
+/* ============================================================
+   SONAR
+   ============================================================ */
+var sonarCanvas = document.getElementById("sonar-canvas");
+var sonarCtx = sonarCanvas.getContext("2d");
+var sonarAngle = 0;
+var sonarContacts = [];
+var sonarReadout = document.getElementById("sonar-readout");
+function drawSonar(){
+  var w = sonarCanvas.width, h = sonarCanvas.height;
+  var cx = w/2, cy = h/2, R = w/2 - 6;
+  sonarCtx.clearRect(0,0,w,h);
+  sonarCtx.strokeStyle = "rgba(77,216,230,.25)";
+  sonarCtx.lineWidth = 1;
+  [0.33,0.66,1].forEach(function(f){
+    sonarCtx.beginPath(); sonarCtx.arc(cx,cy,R*f,0,Math.PI*2); sonarCtx.stroke();
+  });
+  sonarCtx.beginPath(); sonarCtx.moveTo(cx-R,cy); sonarCtx.lineTo(cx+R,cy); sonarCtx.moveTo(cx,cy-R); sonarCtx.lineTo(cx,cy+R); sonarCtx.stroke();
+
+  if(state.sonarOn && !state.reducedMotion){
+    sonarAngle += 0.02;
+    var grad = sonarCtx.createConjicGradient ? null : null;
+    sonarCtx.save();
+    sonarCtx.translate(cx,cy);
+    sonarCtx.rotate(sonarAngle);
+    var sweep = sonarCtx.createLinearGradient(0,0,R,0);
+    sweep.addColorStop(0, "rgba(77,216,230,.5)");
+    sweep.addColorStop(1, "rgba(77,216,230,0)");
+    sonarCtx.beginPath();
+    sonarCtx.moveTo(0,0);
+    sonarCtx.arc(0,0,R,-0.18,0.18);
+    sonarCtx.closePath();
+    sonarCtx.fillStyle = sweep;
+    sonarCtx.fill();
+    sonarCtx.restore();
+  }
+  sonarContacts.forEach(function(c){
+    c.life -= 1;
+    sonarCtx.beginPath();
+    sonarCtx.arc(cx + c.x, cy + c.y, 2.5, 0, Math.PI*2);
+    sonarCtx.fillStyle = "rgba(255,43,109,"+Math.max(0,c.life/120)+")";
+    sonarCtx.fill();
+  });
+  sonarContacts = sonarContacts.filter(function(c){ return c.life > 0; });
+  requestAnimationFrame(drawSonar);
+}
+setInterval(function(){
+  if(!state.sonarOn) { sonarReadout.textContent = "SONAR OFFLINE"; return; }
+  var r = Math.random();
+  var w = sonarCanvas.width, h = sonarCanvas.height, R = w/2-10;
+  if(r < 0.12){
+    var ang = Math.random()*Math.PI*2;
+    var dist = Math.random()*R;
+    sonarContacts.push({x:Math.cos(ang)*dist, y:Math.sin(ang)*dist, life:120});
+    sonarReadout.textContent = "UNKNOWN CONTACT";
+    setTimeout(function(){ if(state.sonarOn) sonarReadout.textContent = "CONTACT LOST"; }, 1600);
+  } else if(r < 0.13 && listenerStage() >= 2){
+    sonarReadout.textContent = "CONTACT: BEHIND YOU";
+    discoverSecret("sonar-behind", "SONAR ANOMALY LOGGED");
+    setTimeout(function(){ sonarReadout.textContent = "NO CONTACT"; }, 2200);
+  } else {
+    sonarReadout.textContent = "NO CONTACT";
+  }
+}, 4200);
+
+/* ============================================================
+   NETWORK MONITOR
+   ============================================================ */
+var packetCount = 128;
+setInterval(function(){
+  packetCount += Math.floor(Math.random()*3);
+  document.getElementById("mon-packets").textContent = String(packetCount).padStart(9,"0");
+  document.getElementById("mon-in").textContent = String(Math.floor(Math.random()*6)).padStart(6,"0");
+  document.getElementById("mon-out").textContent = String(Math.floor(Math.random()*2)).padStart(6,"0");
+  document.getElementById("mon-latency").textContent = (Math.random()>0.15 ? Math.floor(Math.random()*40+8) : "███")+" ms";
+  document.getElementById("mon-signal").textContent = "-"+Math.floor(Math.random()*60+30)+" dBm";
+  document.getElementById("net-count").textContent = (1+state.nodesFound.length)+" / 1,284 ACTIVE";
+}, 1800);
+
+/* ============================================================
+   ARCHIVE
+   ============================================================ */
+var NULL_DOC = { id:"MW-NULL", title:"MW-NULL", cls:"UNKNOWN", author:"UNKNOWN", date:"UNKNOWN", status:"AVAILABLE", conf:"N/A", special:true, unlockLevel:0 };
+
+function renderArchiveList(){
+  document.getElementById("archive-list-wrap").style.display = "";
+  document.getElementById("doc-reader-wrap").style.display = "none";
+  var list = document.getElementById("doc-list");
+  list.innerHTML = "";
+  var visibleDocs = DOCS.filter(function(d){
+    if(d.hidden) return state.secrets.indexOf("konami")>-1 || state.docsRead.indexOf(d.id)>-1;
+    return true;
+  });
+  visibleDocs.forEach(function(d){
+    var unlocked = state.level >= d.unlockLevel;
+    var card = document.createElement("div");
+    card.className = "doc-card" + (unlocked?"":" locked") + (state.docsRead.indexOf(d.id)>-1?" read":"");
+    var statusText = unlocked ? d.status : "ACCESS DENIED";
+    card.innerHTML = "<div class='id'>"+d.id+"</div><div class='name'>"+d.title+"</div><div class='status'>"+statusText+"</div>";
+    if(unlocked){ card.addEventListener("click", function(){ openDoc(d); }); }
+    list.appendChild(card);
+  });
+  // MW-NULL special card
+  var nullCard = document.createElement("div");
+  nullCard.className = "doc-card special";
+  var nullStatus = (state.nullFileOpened % 2 === 1) ? "DELETED" : "AVAILABLE";
+  nullCard.innerHTML = "<div class='id'>MW-NULL</div><div class='name'>0 BYTES</div><div class='status'>"+nullStatus+"</div>";
+  if(nullStatus === "AVAILABLE"){ nullCard.addEventListener("click", openNullFile); }
+  list.appendChild(nullCard);
+
+  var readCount = state.docsRead.filter(function(id){ return DOCS.some(function(d){return d.id===id;}); }).length;
+  document.getElementById("archive-progress").textContent = readCount+" / "+DOCS.filter(function(d){return !d.hidden;}).length+" RECOVERED";
+  updateSysStats();
+}
+function openDoc(d){
+  if(!d) return;
+  if(state.docsRead.indexOf(d.id) === -1){
+    state.docsRead.push(d.id);
+    saveState();
+  }
+  document.getElementById("archive-list-wrap").style.display = "none";
+  document.getElementById("doc-reader-wrap").style.display = "";
+  var body = d.body.map(function(p){ return "<p>"+p+"</p>"; }).join("");
+  var html =
+    "<div class='doc-meta'>"+
+      "<div><span>CLASSIFICATION</span><b>"+d.cls+"</b></div>"+
+      "<div><span>AUTHOR</span><b>"+d.author+"</b></div>"+
+      "<div><span>DATE</span><b>"+d.date+"</b></div>"+
+      "<div><span>STATUS</span><b>"+d.status+"</b></div>"+
+      "<div><span>CONFIDENCE</span><b>"+d.conf+"</b></div>"+
+    "</div>"+
+    "<div class='doc-body'>"+body+"</div>";
+  document.getElementById("doc-reader-content").innerHTML = html;
+  document.getElementById("view-archive").scrollTop = 0;
+  updateSysStats();
+}
+document.getElementById("doc-reader-back").addEventListener("click", renderArchiveList);
+
+function openNullFile(){
+  document.getElementById("archive-list-wrap").style.display = "none";
+  document.getElementById("doc-reader-wrap").style.display = "";
+  document.getElementById("doc-reader-content").innerHTML =
+    "<div class='doc-meta'>"+
+      "<div><span>FILE SIZE</span><b>0 BYTES</b></div>"+
+      "<div><span>CREATED</span><b>UNKNOWN</b></div>"+
+      "<div><span>MODIFIED</span><b>UNKNOWN</b></div>"+
+      "<div><span>OWNER</span><b>UNKNOWN</b></div>"+
+      "<div><span>HASH</span><b>N/A</b></div>"+
+    "</div>"+
+    "<div class='doc-body' id='null-body'></div>";
+  var nb = document.getElementById("null-body");
+  nb.style.opacity = "0";
+  state.nullFileOpened++;
+  saveState();
+  discoverSecret("null-opened", "MW-NULL ACCESSED");
+  setTimeout(function(){
+    nb.innerHTML = "<p style='color:var(--white-dim);text-align:center;font-size:16px;letter-spacing:.06em;'>You were not supposed to find this.</p>";
+    nb.style.transition = "opacity 1.2s";
+    nb.style.opacity = "1";
+    setTimeout(function(){
+      nb.innerHTML += "<p style='color:var(--white-dim);text-align:center;font-size:12px;'>File closed.</p>";
+      if(state.nullFileOpened >= 3){
+        setTimeout(function(){ triggerEnding("D"); }, 1400);
+      }
+    }, 2200);
+  }, 900);
+}
+
+/* ============================================================
+   ENDINGS
+   ============================================================ */
+var ENDING_TEXT = {
+  A: "SESSION TERMINATED.",
+  B: "DEPTH LIMIT REACHED.",
+  C: "CONNECTION ACCEPTED.",
+  D: "THERE WAS NEVER A NETWORK.",
+  OMEGA: "MARIANAS WEB<br><br>SESSION: STILL ACTIVE"
+};
+function triggerEnding(key){
+  if(state.endings.indexOf(key) === -1){ state.endings.push(key); saveState(); }
+  var overlay = document.getElementById("overlay");
+  var textEl = document.getElementById("overlay-text");
+  var canReachOmega = state.endings.indexOf("B") > -1 && state.endings.indexOf("C") > -1;
+  if(key === "OMEGA" || (canReachOmega && Math.random() < 0.4 && key !== "A")){
+    key = "OMEGA";
+    if(state.endings.indexOf("OMEGA")===-1){ state.endings.push("OMEGA"); saveState(); discoverSecret("ending-omega","ENDING Ω REACHED"); }
+    textEl.innerHTML = ENDING_TEXT.OMEGA;
+    overlay.classList.add("show");
+    setTimeout(function(){
+      var btn = document.createElement("button");
+      btn.className = "overlay-return";
+      btn.textContent = "RETURN TO SURFACE";
+      btn.addEventListener("click", returnToSurface);
+      textEl.parentNode.appendChild(btn);
+    }, 9000);
+    return;
+  }
+  textEl.innerHTML = ENDING_TEXT[key] + "<div class='small'>MARIANAS WEB · MW-"+key+" · CONNECTION REMAINS OPEN.</div>";
+  overlay.classList.add("show");
+  var btn = document.createElement("button");
+  btn.className = "overlay-return";
+  btn.textContent = "RETURN TO SURFACE";
+  btn.addEventListener("click", returnToSurface);
+  textEl.parentNode.appendChild(btn);
+}
+function returnToSurface(){
+  document.getElementById("overlay").classList.remove("show");
+  document.querySelectorAll(".overlay-return").forEach(function(b){ b.remove(); });
+  showView("descent");
+}
+document.getElementById("btn-exit-disconnect").addEventListener("click", function(){ triggerEnding("A"); });
+document.getElementById("btn-exit-reset").addEventListener("click", function(){
+  if(confirm("Reset all local archive progress? This cannot be undone.")){
+    localStorage.removeItem(STORE_KEY);
+    location.reload();
+  }
+});
+
+/* ============================================================
+   SYSTEM / SETTINGS
+   ============================================================ */
+function updateSysStats(){
+  document.getElementById("sys-secrets").textContent = state.secrets.length+" / 12";
+  var readCount = state.docsRead.filter(function(id){ return DOCS.some(function(d){return d.id===id;}); }).length;
+  var pct = Math.round((readCount/DOCS.filter(function(d){return !d.hidden;}).length)*100);
+  document.getElementById("sys-archive-pct").textContent = pct+"%";
+  document.getElementById("hud-listener").textContent = LISTENER_STAGES[listenerStage()];
+  document.getElementById("term-access").textContent = LISTENER_STAGES[listenerStage()] === "CONNECTED" ? "GRANTED" : "UNKNOWN";
+}
+function setToggle(btn, on, onLabel, offLabel){
+  btn.classList.toggle("on", on);
+  btn.textContent = on ? onLabel : offLabel;
+}
+var audioCtx, ambientNodes = [];
+function startAmbient(){
+  if(!audioCtx){
+    try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return; }
+  }
+  if(audioCtx.state === "suspended") audioCtx.resume();
+  stopAmbient();
+  var master = audioCtx.createGain();
+  master.gain.value = 0.05;
+  master.connect(audioCtx.destination);
+
+  var osc1 = audioCtx.createOscillator();
+  osc1.type = "sine"; osc1.frequency.value = 42;
+  var g1 = audioCtx.createGain(); g1.gain.value = 0.6;
+  osc1.connect(g1); g1.connect(master); osc1.start();
+
+  var osc2 = audioCtx.createOscillator();
+  osc2.type = "sine"; osc2.frequency.value = 63;
+  var g2 = audioCtx.createGain(); g2.gain.value = 0.25;
+  osc2.connect(g2); g2.connect(master); osc2.start();
+
+  var bufferSize = 2 * audioCtx.sampleRate;
+  var noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  var output = noiseBuffer.getChannelData(0);
+  for(var i=0;i<bufferSize;i++){ output[i] = (Math.random()*2-1) * 0.15; }
+  var noise = audioCtx.createBufferSource();
+  noise.buffer = noiseBuffer; noise.loop = true;
+  var noiseFilter = audioCtx.createBiquadFilter();
+  noiseFilter.type = "lowpass"; noiseFilter.frequency.value = 220;
+  var ng = audioCtx.createGain(); ng.gain.value = 0.4;
+  noise.connect(noiseFilter); noiseFilter.connect(ng); ng.connect(master);
+  noise.start();
+
+  ambientNodes = [osc1, osc2, noise, master];
+}
+function stopAmbient(){
+  ambientNodes.forEach(function(n){ try{ n.stop && n.stop(); n.disconnect && n.disconnect(); }catch(e){} });
+  ambientNodes = [];
+}
+document.getElementById("toggle-audio").addEventListener("click", function(){
+  state.audioOn = !state.audioOn;
+  setToggle(this, state.audioOn, "ON", "OFF");
+  if(state.audioOn) startAmbient(); else stopAmbient();
+  saveState();
+});
+document.getElementById("toggle-sonar").addEventListener("click", function(){
+  state.sonarOn = !state.sonarOn;
+  setToggle(this, state.sonarOn, "ON", "OFF");
+  saveState();
+});
+document.getElementById("toggle-motion").addEventListener("click", function(){
+  state.reducedMotion = !state.reducedMotion;
+  setToggle(this, !state.reducedMotion, "FULL", "REDUCED");
+  document.body.classList.toggle("reduced-motion", state.reducedMotion);
+  saveState();
+});
+document.getElementById("toggle-contrast").addEventListener("click", function(){
+  state.highContrast = !state.highContrast;
+  setToggle(this, state.highContrast, "HIGH", "STANDARD");
+  document.body.classList.toggle("high-contrast", state.highContrast);
+  saveState();
+});
+
+/* ============================================================
+   CLOCK / SESSION TIMERS
+   ============================================================ */
+function pad(n){ return String(n).padStart(2,"0"); }
+var clockDrift = (Math.random()*3).toFixed(2);
+function tickClock(){
+  var now = new Date();
+  document.getElementById("hud-time").textContent = pad(now.getHours())+":"+pad(now.getMinutes())+":"+pad(now.getSeconds());
+  var elapsed = Math.floor((Date.now()-state.sessionStart)/1000);
+  var hh = pad(Math.floor(elapsed/3600)), mm = pad(Math.floor((elapsed%3600)/60)), ss = pad(elapsed%60);
+  document.getElementById("hud-session").textContent = hh+":"+mm+":"+ss;
+  document.getElementById("sys-session").textContent = hh+":"+mm+":"+ss+" LOCAL";
+  clockDrift = (parseFloat(clockDrift) + (Math.random()-0.5)*0.02).toFixed(2);
+  document.getElementById("sys-drift").textContent = "+00:00:"+(Math.abs(clockDrift)<10?"0":"")+Math.abs(clockDrift);
+}
+setInterval(tickClock, 1000);
+
+/* clock click easter egg */
+document.getElementById("hud-time").addEventListener("click", function(){
+  state.clockClicks++;
+  if(state.clockClicks === 5){
+    discoverSecret("clock-5", "TIMESTAMP ANOMALY EXPOSED");
+    flashToast("NODE TIME DOES NOT MATCH LOCAL TIME. IT NEVER HAS.");
+  }
+  saveState();
+});
+document.getElementById("brand-title").addEventListener("click", function(){
+  state.brandClicks++;
+  if(state.brandClicks === 7){
+    discoverSecret("brand-7", "HIDDEN TITLE UNLOCKED");
+    document.querySelector("#brand-title").childNodes[0].textContent = "MW-Ω ";
+    setTimeout(function(){ document.querySelector("#brand-title").childNodes[0].textContent = "MARIANAS WEB"; }, 4000);
+  }
+  saveState();
+});
+
+/* ============================================================
+   INACTIVITY / LISTENER PRESENCE
+   ============================================================ */
+var lastActivity = Date.now();
+["click","keydown","pointermove","touchstart"].forEach(function(evt){
+  window.addEventListener(evt, function(){ lastActivity = Date.now(); }, {passive:true});
+});
+setInterval(function(){
+  if(!document.getElementById("app").classList.contains("active")) return;
+  if(document.getElementById("view-descent").classList.contains("active") && Date.now()-lastActivity > 60000){
+    discoverSecret("idle-60", "IDLE RESPONSE LOGGED");
+    flashToast("WHY DID YOU STOP?");
+    lastActivity = Date.now();
+  }
+}, 5000);
+
+/* ============================================================
+   KONAMI-STYLE SEQUENCE + MONOCHROME SHORTCUT
+   ============================================================ */
+var seq = [];
+var KONAMI = ["ArrowUp","ArrowUp","ArrowDown","ArrowDown","ArrowLeft","ArrowRight","ArrowLeft","ArrowRight"];
+window.addEventListener("keydown", function(e){
+  if(document.activeElement === termInput) return;
+  seq.push(e.key);
+  seq = seq.slice(-KONAMI.length);
+  if(seq.join(",") === KONAMI.join(",")){
+    discoverSecret("konami", "HIDDEN DOCUMENT UNLOCKED — MW-0010");
+    flashToast("DOCUMENT MW-0010 IS NOW INDEXED");
+  }
+  if(e.ctrlKey && e.shiftKey && e.key.toLowerCase()==="m"){
+    document.body.classList.toggle("high-contrast");
+    discoverSecret("mono-shortcut", "MONOCHROME OVERRIDE TRIGGERED");
+  }
+});
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function initApp(){
+  loadState();
+  resizeBg(); initParticles(); requestAnimationFrame(drawBg);
+  genNodes(); resizeNodeCanvas(); requestAnimationFrame(drawNodes);
+  requestAnimationFrame(drawSonar);
+  selectLevel(state.level);
+  bootTerminalGreeting();
+  renderArchiveList();
+  updateSysStats();
+  document.body.classList.toggle("reduced-motion", state.reducedMotion);
+  document.body.classList.toggle("high-contrast", state.highContrast);
+  setToggle(document.getElementById("toggle-audio"), state.audioOn, "ON","OFF");
+  setToggle(document.getElementById("toggle-sonar"), state.sonarOn, "ON","OFF");
+  setToggle(document.getElementById("toggle-motion"), !state.reducedMotion, "FULL","REDUCED");
+  setToggle(document.getElementById("toggle-contrast"), state.highContrast, "HIGH","STANDARD");
+  if(state.audioOn) startAmbient();
+}
+
+typeBoot();
+
+})();
+</script>
+</body>
+</html>
